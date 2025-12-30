@@ -1,0 +1,1 @@
+KERNEL=="sd*", ATTRS{idVendor}=="3625", ATTRS{idProduct}=="0110",  SYMLINK+="aicudisk", RUN+="/usr/bin/eject /dev/%k"
