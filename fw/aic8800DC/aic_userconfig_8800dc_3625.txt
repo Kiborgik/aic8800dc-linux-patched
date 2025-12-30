@@ -31,7 +31,7 @@ lvl_11ax_mcs3_2g4=20
 lvl_11ax_mcs4_2g4=20
 lvl_11ax_mcs5_2g4=20
 lvl_11ax_mcs6_2g4=19
-lvl_11ax_mcs7_2g418
+lvl_11ax_mcs7_2g4=18
 lvl_11ax_mcs8_2g4=17
 lvl_11ax_mcs9_2g4=17
 lvl_11ax_mcs10_2g4=16
