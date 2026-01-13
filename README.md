@@ -1,8 +1,11 @@
 ```
 git clone <this repo>
+cd aic8800dc-linux-patched
 
 sudo chmod +x install_setup.sh
 sudo ./install_setup.sh
+
+cd drivers/aic8800
 
 sudo make
 
