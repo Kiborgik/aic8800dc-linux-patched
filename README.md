@@ -1,5 +1,5 @@
 ```
-git clone <this repo>
+git clone https://github.com/Kiborgik/aic8800dc-linux-patched.git
 cd aic8800dc-linux-patched
 
 sudo chmod +x install_setup.sh
