@@ -16,7 +16,7 @@ int rwnx_plat_bin_fw_patch_table_upload_android(struct aic_usb_dev *usbdev, char
 
 int rwnx_plat_userconfig_upload_android(char *filename);
 
-uint8_t rwnx_atoi(char *value);
+int8_t rwnx_atoi(char *value);
 uint32_t rwnx_atoli(char *value);
 
 #endif
