@@ -27,6 +27,7 @@
 #define FW_USERCONFIG_NAME_8800DC_2357    "aic_userconfig_8800dc_2357.txt"
 #define FW_USERCONFIG_NAME_8800DC_2C4E    "aic_userconfig_8800dc_2c4e.txt"
 #define FW_USERCONFIG_NAME_8800DC_3625    "aic_userconfig_8800dc_3625.txt"
+#define FW_USERCONFIG_NAME_8800DC_2604    "aic_userconfig_8800dc_2604.txt"
 
 int rwnx_plat_bin_fw_upload_2(struct rwnx_hw *rwnx_hw, u32 fw_addr,
                                char *filename);
@@ -1994,12 +1995,17 @@ int	rwnx_plat_userconfig_load_8800dc(struct rwnx_hw *rwnx_hw){
     int size;
     u32 *dst=NULL;
     char *filename = FW_USERCONFIG_NAME_8800DC;
-    if (rwnx_hw->usbdev->udev->descriptor.idProduct == 0x0147 && rwnx_hw->usbdev->udev->descriptor.idVendor==0x2357) {
+    u16 vid = le16_to_cpu(rwnx_hw->usbdev->udev->descriptor.idVendor);
+    u16 pid = le16_to_cpu(rwnx_hw->usbdev->udev->descriptor.idProduct);
+
+    if (vid == USB_VENDOR_ID_TP && pid == USB_PRODUCT_ID_TP) {
         filename = FW_USERCONFIG_NAME_8800DC_2357;
-    } else if (rwnx_hw->usbdev->udev->descriptor.idProduct == 0x0114 && rwnx_hw->usbdev->udev->descriptor.idVendor==0x2c4e) {
+    } else if (vid == USB_VENDOR_ID_MERCUSYS && pid == USB_PRODUCT_ID_MERCUSYS) {
         filename = FW_USERCONFIG_NAME_8800DC_2C4E;
-    } else if (rwnx_hw->usbdev->udev->descriptor.idProduct == 0x0110 && rwnx_hw->usbdev->udev->descriptor.idVendor==0x3625) {
+    } else if (vid == USB_VENDOR_ID_TP2 && pid == USB_PRODUCT_ID_TP2) {
         filename = FW_USERCONFIG_NAME_8800DC_3625;
+    } else if (vid == USB_VENDOR_ID_TENDA && pid == USB_PRODUCT_ID_TENDA) {
+        filename = FW_USERCONFIG_NAME_8800DC_2604;
     }
 
     AICWFDBG(LOGINFO, "userconfig file path:%s \r\n", filename);
