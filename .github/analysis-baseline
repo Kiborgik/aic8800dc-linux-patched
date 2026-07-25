@@ -2,5 +2,5 @@
 # the point is that a patch may not make it noisier. Lower these when you fix
 # warnings. Re-baseline if the runner image or tool versions change.
 
-SPARSE_MAX=334
-CPPCHECK_MAX=50
+SPARSE_MAX=191
+CPPCHECK_MAX=40
