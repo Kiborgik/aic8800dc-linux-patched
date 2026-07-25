@@ -8860,7 +8860,8 @@ int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
     struct mm_get_fw_version_cfm fw_version;
     u8_l mac_addr_efuse[ETH_ALEN];
 #ifndef USE_5G
-    struct aic_feature_t feature;
+    /* never assigned, but hwinfo goes to the fw as set_vendor_info below */
+    struct aic_feature_t feature = { 0 };
 #endif
     struct mm_set_stack_start_cfm set_start_cfm;
 
