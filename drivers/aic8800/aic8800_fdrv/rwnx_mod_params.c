@@ -19,6 +19,7 @@
 #include "rwnx_dini.h"
 #include "reg_access.h"
 #include "rwnx_compat.h"
+#include "rwnx_mod_params.h"
 
 #ifdef CONFIG_RWNX_FULLMAC
 #define COMMON_PARAM(name, default_softmac, default_fullmac)    \

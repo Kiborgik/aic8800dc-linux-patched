@@ -14,21 +14,6 @@
 #define PRINT 2
 #define GET_VALUE 3
 
-typedef struct
-{
-    int8_t enable;
-    int8_t dsss;
-    int8_t ofdmlowrate_2g4;
-    int8_t ofdm64qam_2g4;
-    int8_t ofdm256qam_2g4;
-    int8_t ofdm1024qam_2g4;
-    int8_t ofdmlowrate_5g;
-    int8_t ofdm64qam_5g;
-    int8_t ofdm256qam_5g;
-    int8_t ofdm1024qam_5g;
-} txpwr_idx_conf_t;
-
-
 txpwr_idx_conf_t userconfig_txpwr_idx = {
 	.enable 		  = 1,
 	.dsss			  = 9,
@@ -43,18 +28,6 @@ txpwr_idx_conf_t userconfig_txpwr_idx = {
 
 };
 
-typedef struct
-{
-    int8_t enable;
-    int8_t chan_1_4;
-    int8_t chan_5_9;
-    int8_t chan_10_13;
-    int8_t chan_36_64;
-    int8_t chan_100_120;
-    int8_t chan_122_140;
-    int8_t chan_142_165;
-} txpwr_ofst_conf_t;
-
 txpwr_ofst_conf_t userconfig_txpwr_ofst = {
 	.enable = 1,
 	.chan_1_4 = 0,
@@ -65,14 +38,6 @@ txpwr_ofst_conf_t userconfig_txpwr_ofst = {
 	.chan_122_140 = 0,
 	.chan_142_165 = 0
 };
-
-typedef struct
-{
-    int8_t enable;
-    int8_t xtal_cap;
-    int8_t xtal_cap_fine;
-} xtal_cap_conf_t;
-
 
 xtal_cap_conf_t userconfig_xtal_cap = {
 	.enable = 0,
