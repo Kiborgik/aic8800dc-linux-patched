@@ -1585,7 +1585,7 @@ void get_userconfig_xtal_cap(xtal_cap_conf_t *xtal_cap)
     AICWFDBG(LOGINFO, "%s:xtal_cap_fine:%d\r\n", __func__, xtal_cap->xtal_cap_fine);
 }
 
-void rwnx_plat_nvram_set_value(char *command, char *value)
+static void rwnx_plat_nvram_set_value(char *command, char *value)
 {
     //TODO send command
     AICWFDBG(LOGINFO, "%s:command=%s value=%s\n", __func__, command, value);

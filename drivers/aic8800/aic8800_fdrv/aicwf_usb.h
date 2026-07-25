@@ -172,6 +172,7 @@ struct aic_usb_dev {
 extern void aicwf_usb_exit(void);
 extern void aicwf_usb_register(void);
 extern void aicwf_usb_tx_flowctrl(struct rwnx_hw *rwnx_hw, bool state);
+void aicwf_usb_cancel_all_urbs(struct aic_usb_dev *usb_dev);
 #ifdef CONFIG_USB_MSG_IN_EP
 int usb_msg_busrx_thread(void *data);
 #endif

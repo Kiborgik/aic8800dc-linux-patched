@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PACKAGE_NAME="aic8800dc"
-PACKAGE_VERSION="6.4.3.0-patched.6"
+PACKAGE_VERSION="6.4.3.0-patched.7"
 KVER="$(uname -r)"
 PASS=0
 FAIL=0

@@ -102,7 +102,7 @@ static void dini_set_bar4_win(u32 low, u32 high, struct rwnx_dini *rwnx_dini)
  * Enable User Interrupts of CFPGA that trigger PCIe IRQs on PCIE_10
  * and request the corresponding IRQ line
  */
-int rwnx_cfpga_irq_enable(struct rwnx_hw *rwnx_hw)
+static int rwnx_cfpga_irq_enable(struct rwnx_hw *rwnx_hw)
 {
     struct rwnx_plat *rwnx_plat = rwnx_hw->plat;
     struct rwnx_dini *rwnx_dini = (struct rwnx_dini *)rwnx_plat->priv;
@@ -126,7 +126,7 @@ int rwnx_cfpga_irq_enable(struct rwnx_hw *rwnx_hw)
  * Disable User Interrupts of CFPGA that trigger PCIe IRQs on PCIE_10
  * and free the corresponding IRQ line
  */
-int rwnx_cfpga_irq_disable(struct rwnx_hw *rwnx_hw)
+static int rwnx_cfpga_irq_disable(struct rwnx_hw *rwnx_hw)
 {
     struct rwnx_plat *rwnx_plat = rwnx_hw->plat;
     struct rwnx_dini *rwnx_dini = (struct rwnx_dini *)rwnx_plat->priv;

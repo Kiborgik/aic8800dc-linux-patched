@@ -6,12 +6,13 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Advisory static analysis. It prints and counts warnings but never fails
-# the run, because W=1 on this vendor code is noisy. Use it to spot new
-# warnings, not as a gate.
+# Ratchet, not a clean-tree gate: W=1 on this vendor code is far too noisy to
+# demand zero warnings, so this only fails when a patch pushes a count past the
+# ceiling in .github/analysis-baseline.
 jobs:
   static-analysis:
-    runs-on: ubuntu-latest
+    # Pinned: tool versions decide the counts, so an image roll would move them.
+    runs-on: ubuntu-24.04
     name: static analysis
     steps:
       - uses: actions/checkout@v7
@@ -36,10 +37,33 @@ jobs:
             2> cppcheck.log || true
           cat cppcheck.log
 
-      - name: summary
+      - name: compare against baseline
         run: |
+          . ./.github/analysis-baseline
+
+          sparse=$(grep -c 'warning:' analyze-build.log || true)
+          # findings, not lines: cppcheck prints the source line and a caret too
+          cppcheck=$(grep -cE ': (error|warning|performance|portability|style|information):' cppcheck.log || true)
+
           {
             echo "### Static analysis"
-            echo "- sparse + W=1 warnings: $(grep -c 'warning:' analyze-build.log || true)"
-            echo "- cppcheck findings: $(wc -l < cppcheck.log)"
+            echo ""
+            echo "| check | current | ceiling |"
+            echo "| --- | --- | --- |"
+            echo "| sparse + gcc W=1 | $sparse | $SPARSE_MAX |"
+            echo "| cppcheck | $cppcheck | $CPPCHECK_MAX |"
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          status=0
+          if [ "$sparse" -gt "$SPARSE_MAX" ]; then
+            echo "::error::sparse/W=1 warnings rose to $sparse, ceiling is $SPARSE_MAX"
+            status=1
+          fi
+          if [ "$cppcheck" -gt "$CPPCHECK_MAX" ]; then
+            echo "::error::cppcheck findings rose to $cppcheck, ceiling is $CPPCHECK_MAX"
+            status=1
+          fi
+          if [ "$sparse" -lt "$SPARSE_MAX" ] || [ "$cppcheck" -lt "$CPPCHECK_MAX" ]; then
+            echo "::notice::under the ceiling, lower .github/analysis-baseline to lock it in"
+          fi
+          exit $status

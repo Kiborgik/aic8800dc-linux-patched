@@ -32,7 +32,7 @@ void aicwf_usb_host_init(struct usb_host_env_tag *env,
 /**
  ****************************************************************************************
  */
-volatile struct txdesc_host *aicwf_usb_host_txdesc_get(struct usb_host_env_tag *env, const int queue_idx)
+static volatile struct txdesc_host *aicwf_usb_host_txdesc_get(struct usb_host_env_tag *env, const int queue_idx)
 {
  //   struct ipc_shared_env_tag *shared_env_ptr = env->shared;
     volatile struct txdesc_host *txdesc_free = NULL;

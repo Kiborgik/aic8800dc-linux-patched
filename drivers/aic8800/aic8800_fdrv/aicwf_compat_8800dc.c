@@ -1,6 +1,7 @@
 #include "rwnx_main.h"
 #include "rwnx_msg_tx.h"
 #include "reg_access.h"
+#include "aicwf_compat_8800dc.h"
 
 #define RWNX_MAC_FW_RF_BASE_NAME_8800DC   "lmacfw_rf_8800dc.bin"
 

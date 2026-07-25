@@ -618,7 +618,7 @@ rwnx_tdls_add_setup_cfm_ies(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_vif,
                               const u8 *extra_ies, size_t extra_ies_len)
 {
     struct ieee80211_supported_band *sband;
-    enum nl80211_band band = rwnx_vif->sta.ap->band;
+    enum nl80211_band band;
     struct ieee80211_sta_ht_cap ht_cap;
     struct ieee80211_sta_vht_cap vht_cap;
 
@@ -634,6 +634,8 @@ rwnx_tdls_add_setup_cfm_ies(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_vif,
         rcu_read_unlock();
         return;
     }
+
+    band = ap_sta->band;
 
     /* add the QoS param IE if both the peer and we support it */
     if (sta->qos)

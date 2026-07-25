@@ -167,7 +167,7 @@ static inline void limit_chan_bw(u8_l *bw, u16_l primary, u16_l *center1)
     *center1 = primary + new_oft;
 }
 
-struct rwnx_cmd *rwnx_cmd_malloc(void){
+static struct rwnx_cmd *rwnx_cmd_malloc(void){
 	struct rwnx_cmd *cmd = NULL;
 	unsigned long flags = 0;
 	bool pending = false;
@@ -1336,7 +1336,7 @@ int rwnx_send_vendor_trx_param_req(struct rwnx_hw *rwnx_hw, uint32_t *edca, uint
 }
 
 #endif
-int rwnx_send_vendor_hwconfig_req(struct rwnx_hw *rwnx_hw, uint32_t hwconfig_id, int32_t *param)
+int rwnx_send_vendor_hwconfig_req(struct rwnx_hw *rwnx_hw, uint32_t hwconfig_id, uint32_t *param)
 {
 	struct mm_set_acs_txop_req *req0;
 	struct mm_set_channel_access_req *req1;
@@ -3368,7 +3368,7 @@ int rwnx_send_dbg_trigger_req(struct rwnx_hw *rwnx_hw, char *msg)
         return -ENOMEM;
 
     /* Set parameters for the MM_DBG_TRIGGER_REQ message */
-    strncpy(req->error, msg, sizeof(req->error));
+    strscpy(req->error, msg, sizeof(req->error));
 
     /* Send the MM_DBG_TRIGGER_REQ message to LMAC FW */
     return rwnx_send_msg(rwnx_hw, req, 0, -1, NULL);
