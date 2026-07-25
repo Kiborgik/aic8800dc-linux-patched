@@ -265,7 +265,7 @@ char ccode_channels[200];
 int index_for_channel_list = 0;
 module_param_string(ccode_channels, ccode_channels, 200, 0600);
 
-void rwnx_get_countrycode_channels(struct wiphy *wiphy,
+static void rwnx_get_countrycode_channels(struct wiphy *wiphy,
 		struct ieee80211_regdomain *regdomain){
 	enum nl80211_band band;
 	struct ieee80211_supported_band *sband;

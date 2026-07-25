@@ -897,7 +897,7 @@ static struct pri_detector_ops pri_detector_long = {
  * @radar_type: index of radar pattern
  * @freq: Frequency of the pri detector
  */
-struct pri_detector *pri_detector_init(struct dfs_pattern_detector *dpd,
+static struct pri_detector *pri_detector_init(struct dfs_pattern_detector *dpd,
                                        u16 radar_type, u16 freq)
 {
     struct pri_detector *pde;

@@ -167,7 +167,7 @@ static inline void limit_chan_bw(u8_l *bw, u16_l primary, u16_l *center1)
     *center1 = primary + new_oft;
 }
 
-struct rwnx_cmd *rwnx_cmd_malloc(void){
+static struct rwnx_cmd *rwnx_cmd_malloc(void){
 	struct rwnx_cmd *cmd = NULL;
 	unsigned long flags = 0;
 	bool pending = false;
