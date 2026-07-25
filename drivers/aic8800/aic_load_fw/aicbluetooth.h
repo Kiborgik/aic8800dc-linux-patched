@@ -19,4 +19,9 @@ int rwnx_plat_userconfig_upload_android(char *filename);
 int8_t rwnx_atoi(char *value);
 uint32_t rwnx_atoli(char *value);
 
+void get_fw_path(char *fw_path);
+void set_testmode(int val);
+int get_testmode(void);
+int get_hardware_info(void);
+
 #endif
