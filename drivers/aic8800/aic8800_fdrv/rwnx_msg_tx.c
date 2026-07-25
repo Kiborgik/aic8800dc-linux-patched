@@ -1336,7 +1336,7 @@ int rwnx_send_vendor_trx_param_req(struct rwnx_hw *rwnx_hw, uint32_t *edca, uint
 }
 
 #endif
-int rwnx_send_vendor_hwconfig_req(struct rwnx_hw *rwnx_hw, uint32_t hwconfig_id, int32_t *param)
+int rwnx_send_vendor_hwconfig_req(struct rwnx_hw *rwnx_hw, uint32_t hwconfig_id, uint32_t *param)
 {
 	struct mm_set_acs_txop_req *req0;
 	struct mm_set_channel_access_req *req1;

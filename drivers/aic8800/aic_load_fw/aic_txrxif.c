@@ -157,7 +157,6 @@ void aicwf_tx_deinit(struct aicwf_tx_priv* tx_priv)
         dev_kfree_skb(tx_priv->aggr_buf);
 
     kfree(tx_priv);
-    tx_priv = NULL;
 }
 
 static bool aicwf_another_ptk(struct sk_buff *skb)
@@ -324,7 +323,6 @@ void aicwf_rx_deinit(struct aicwf_rx_priv* rx_priv)
     }
 
     kfree(rx_priv);
-    rx_priv = NULL;
 }
 
 bool aicwf_rxframe_enqueue(struct device *dev, struct frame_queue *q, struct sk_buff *pkt)
