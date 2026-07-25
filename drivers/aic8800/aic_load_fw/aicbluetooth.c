@@ -3,6 +3,7 @@
 #include "aicbluetooth_cmds.h"
 #include "aicwf_usb.h"
 #include "md5.h"
+#include "aicbluetooth.h"
 #ifdef CONFIG_USE_FW_REQUEST
 #include <linux/firmware.h>
 #endif

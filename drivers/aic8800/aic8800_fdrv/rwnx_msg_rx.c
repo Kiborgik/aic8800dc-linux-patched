@@ -20,6 +20,7 @@
 #ifdef CONFIG_RWNX_FULLMAC
 #include "rwnx_debugfs.h"
 #include "rwnx_msg_tx.h"
+#include "rwnx_msg_rx.h"
 #include "rwnx_tdls.h"
 #endif /* CONFIG_RWNX_FULLMAC */
 #include "rwnx_events.h"
