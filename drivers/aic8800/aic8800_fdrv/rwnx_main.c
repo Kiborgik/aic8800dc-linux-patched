@@ -5001,7 +5001,14 @@ rwnx_cfg80211_remain_on_channel(struct wiphy *wiphy,
                             #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)
                                 enum nl80211_channel_type channel_type,
                             #endif
-                                unsigned int duration, u64 *cookie)
+                                unsigned int duration, u64 *cookie
+                            #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
+                                /* Always NULL here: cfg80211 refuses an address
+                                 * filter unless the driver advertises
+                                 * NL80211_EXT_FEATURE_ROC_ADDR_FILTER. */
+                                , const u8 *rx_addr
+                            #endif
+                                )
 {
     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0)
@@ -5389,7 +5396,10 @@ static int rwnx_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 		AICWFDBG(LOGINFO, "mgmt rx remain on chan\n");
 
         /* Start a ROC procedure for 30ms */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0))
+        error = rwnx_cfg80211_remain_on_channel(wiphy, wdev, channel,
+                                                30, &cookie, NULL);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
         error = rwnx_cfg80211_remain_on_channel(wiphy, wdev, channel,
                                                 30, &cookie);
 #elif (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
