@@ -60,3 +60,28 @@ jobs:
             dkms add   -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION"
             dkms build -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION" -k "$kver"
           '
+
+  # Early warning only: mainline -rc breaks us weeks before Arch ships the final
+  # release, but an -rc can also be broken on its own, so this must never gate a
+  # merge. Fedora Rawhide is used because it packages mainline -rc kernel-devel,
+  # which avoids compiling a kernel just to get headers.
+  rc:
+    runs-on: ubuntu-latest
+    name: mainline rc
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: dkms build
+        run: |
+          docker run --rm -v "$PWD:/src:ro" fedora:rawhide bash -c '
+            set -e
+            dnf -y install kernel-devel dkms gcc make bc kmod
+            kver=$(ls -1 /usr/src/kernels | head -1)
+            echo "building against $kver"
+            . /src/dkms.conf
+            mkdir -p "/usr/src/$PACKAGE_NAME-$PACKAGE_VERSION"
+            cp -a /src/. "/usr/src/$PACKAGE_NAME-$PACKAGE_VERSION/"
+            dkms add   -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION"
+            dkms build -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION" -k "$kver" \
+              --kernelsourcedir "/usr/src/kernels/$kver"
+          '
