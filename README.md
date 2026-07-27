@@ -1,6 +1,10 @@
 # AIC8800DC Linux Driver (Patched)
 
-[![build](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/build.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/build.yml)
+[![6.12 LTS](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-6.12-lts.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-6.12-lts.yml)
+[![7.1 stable](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-7.1.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-7.1.yml)
+[![latest](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-latest.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-latest.yml)
+[![mainline rc](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-mainline-rc.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-mainline-rc.yml)
+[![scripts](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/scripts.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/scripts.yml)
 
 Out-of-tree Linux driver for the AIC8800DC USB Wi-Fi chipset, based on
 upstream 6.4.3.0 with compatibility fixes. DKMS-aware: rebuilds itself

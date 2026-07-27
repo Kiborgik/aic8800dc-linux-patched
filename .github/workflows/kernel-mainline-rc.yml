@@ -1,0 +1,34 @@
+name: mainline rc
+
+# Early warning: an upstream API change lands here weeks before Arch ships the
+# release it breaks. Fedora Rawhide packages -rc kernel-devel, so this costs a
+# download rather than a kernel build. Allowed to fail on its own workflow,
+# where a red badge means mainline moved and not that the driver is broken for
+# anyone yet.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  dkms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: dkms build
+        run: |
+          docker run --rm -v "$PWD:/src:ro" fedora:rawhide bash -c '
+            set -e
+            dnf -y install kernel-devel dkms gcc make bc kmod
+            kver=$(ls -1 /usr/src/kernels | head -1)
+            echo "building against $kver"
+            . /src/dkms.conf
+            mkdir -p "/usr/src/$PACKAGE_NAME-$PACKAGE_VERSION"
+            cp -a /src/. "/usr/src/$PACKAGE_NAME-$PACKAGE_VERSION/"
+            dkms add   -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION"
+            dkms build -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION" -k "$kver" \
+              --kernelsourcedir "/usr/src/kernels/$kver"
+          '

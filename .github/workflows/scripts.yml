@@ -1,0 +1,25 @@
+name: scripts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  install-test-uninstall:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: install.sh + test.sh + uninstall.sh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            dkms build-essential linux-headers-$(uname -r) eject
+          chmod +x install.sh test.sh uninstall.sh
+          sudo ./install.sh
+          sudo ./test.sh | tee test.log
+          grep -qE 'Result: [0-9]+ passed, 0 failed' test.log
+          sudo ./uninstall.sh

@@ -1,0 +1,41 @@
+name: build-kernel
+
+# Called once per kernel by the thin wrappers next to this file. One workflow
+# per kernel is what makes each of them badge-able: badges are per workflow
+# file, so a matrix inside a single workflow can only ever produce one.
+on:
+  workflow_call:
+    inputs:
+      pkgver:
+        description: archive.archlinux.org linux-headers version, empty for current
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  dkms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: dkms build
+        env:
+          PKGVER: ${{ inputs.pkgver }}
+        run: |
+          docker run --rm -e PKGVER -v "$PWD:/src:ro" archlinux:latest bash -c '
+            set -e
+            pacman -Syu --noconfirm --needed base-devel bc kmod dkms curl
+            if [ -n "$PKGVER" ]; then
+              curl -fsSL -o /tmp/h.pkg.tar.zst \
+                "https://archive.archlinux.org/packages/l/linux-headers/linux-headers-$PKGVER-x86_64.pkg.tar.zst"
+              pacman -U --noconfirm /tmp/h.pkg.tar.zst
+            else
+              pacman -S --noconfirm linux-headers
+            fi
+            kver=$(ls -1 /usr/lib/modules | head -1)
+            echo "building against $kver"
+            . /src/dkms.conf
+            mkdir -p "/usr/src/$PACKAGE_NAME-$PACKAGE_VERSION"
+            cp -a /src/. "/usr/src/$PACKAGE_NAME-$PACKAGE_VERSION/"
+            dkms add   -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION"
+            dkms build -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION" -k "$kver"
+          '
