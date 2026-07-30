@@ -1800,13 +1800,21 @@ static int aicwf_parse_usb(struct aic_usb_dev *usb_dev, struct usb_interface *in
 #else
     if (usb->actconfig->desc.bNumInterfaces != 1) {
 #endif
-	   AICWFDBG(LOGERROR, "Number of interfaces: %d not supported\n",
-            usb->actconfig->desc.bNumInterfaces);
-		if(usb_dev->chipid == PRODUCT_ID_AIC8800DC){
-			AICWFDBG(LOGERROR, "AIC8800DC change to AIC8800DW\n");
-			usb_dev->chipid = PRODUCT_ID_AIC8800DW;
-        }else if (usb_dev->chipid == PRODUCT_ID_AIC8800DW) {
-            printk("8800dw\n");
+		/* The MA14N has no Bluetooth, so it shows one interface where a
+		   BT build expects three. Normal for this stick, and the DC
+		   chipid from its VID/PID has to survive. */
+		if (le16_to_cpu(usb->descriptor.idVendor) == USB_VENDOR_ID_MERCUSYS &&
+		    le16_to_cpu(usb->descriptor.idProduct) == USB_PRODUCT_ID_MERCUSYS) {
+			AICWFDBG(LOGINFO, "Mercusys MA14N: single interface, keeping AIC8800DC\n");
+		} else {
+			AICWFDBG(LOGERROR, "Number of interfaces: %d not supported\n",
+				usb->actconfig->desc.bNumInterfaces);
+			if(usb_dev->chipid == PRODUCT_ID_AIC8800DC){
+				AICWFDBG(LOGERROR, "AIC8800DC change to AIC8800DW\n");
+				usb_dev->chipid = PRODUCT_ID_AIC8800DW;
+			}else if (usb_dev->chipid == PRODUCT_ID_AIC8800DW) {
+				printk("8800dw\n");
+			}
 		}
     }
 
@@ -1970,15 +1978,16 @@ static int aicwf_usb_chipmatch(struct aic_usb_dev *usb_dev, u16_l vid, u16_l pid
 		AICWFDBG(LOGINFO, "%s USE AIC8801\r\n", __func__);
 		return 0;
 	}else if(pid == USB_PRODUCT_ID_AIC8800DC ||
-        (vid == USB_VENDOR_ID_TENDA && pid == USB_PRODUCT_ID_TENDA)){
+        (vid == USB_VENDOR_ID_TENDA && pid == USB_PRODUCT_ID_TENDA)
+        /* MA14N reports itself as AIC8800DC; it sat in the DW branch below */
+        || (vid == USB_VENDOR_ID_MERCUSYS && pid == USB_PRODUCT_ID_MERCUSYS)){
 		usb_dev->chipid = PRODUCT_ID_AIC8800DC;
 		AICWFDBG(LOGINFO, "%s USE AIC8800DC\r\n", __func__);
 		return 0;
 	}else if(pid == USB_PRODUCT_ID_AIC8800DW
 	 || pid == USB_PRODUCT_ID_AIC8800FC ||
         (vid == USB_VENDOR_ID_TP && pid == USB_PRODUCT_ID_TP)
-        || (vid == USB_VENDOR_ID_TP2 && pid == USB_PRODUCT_ID_TP2)
-        || (vid == USB_VENDOR_ID_MERCUSYS && pid == USB_PRODUCT_ID_MERCUSYS)){
+        || (vid == USB_VENDOR_ID_TP2 && pid == USB_PRODUCT_ID_TP2)){
         usb_dev->chipid = PRODUCT_ID_AIC8800DW;
 		AICWFDBG(LOGINFO, "%s USE AIC8800DW\r\n", __func__);
         return 0;
