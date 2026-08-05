@@ -13,6 +13,9 @@ on:
     - cron: '0 6 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   dkms:
     runs-on: ubuntu-latest

@@ -8,6 +8,9 @@ on:
     - cron: '0 6 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   install-test-uninstall:
     runs-on: ubuntu-latest
