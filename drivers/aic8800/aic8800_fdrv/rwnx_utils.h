@@ -85,8 +85,6 @@ struct rwnx_ipc_dbgdump_elem {
     struct rwnx_ipc_elem_var buf;
 };
 
-static const u32 rwnx_rxbuff_pattern = 0xCAFEFADE;
-
 /*
  * Maximum Length of Radiotap header vendor specific data(in bytes)
  */

@@ -902,7 +902,6 @@ static void aicwf_usb_tx_process(struct aic_usb_dev *usb_dev)
 {
     struct aicwf_usb_buf *usb_buf;
     int ret = 0;
-    u8* data = NULL;
 
 #ifdef CONFIG_USB_TX_AGGR
     if (!aicwf_is_framequeue_empty(&usb_dev->tx_priv->txq)) {
@@ -925,7 +924,6 @@ static void aicwf_usb_tx_process(struct aic_usb_dev *usb_dev)
             usb_err("can not get usb_buf from tx_post_list!\n");
             return;
         }
-        data = usb_buf->skb->data;
 
         ret = usb_submit_urb(usb_buf->urb, GFP_ATOMIC);
         if (ret) {
@@ -1314,12 +1312,9 @@ err:
 
 static void aicwf_usb_state_change(struct aic_usb_dev *usb_dev, int state)
 {
-    int old_state;
-
     if (usb_dev->state == state)
         return;
 
-    old_state = usb_dev->state;
     usb_dev->state = state;
 
     if (state == USB_DOWN_ST) {

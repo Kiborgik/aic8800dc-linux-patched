@@ -1226,12 +1226,10 @@ bool rwnx_txq_select_user(struct rwnx_hw *rwnx_hw, bool mu_lock,
  *
  * To be called with tx_lock hold
  */
-#define ALL_HWQ_MASK  ((1 << CONFIG_USER_MAX) - 1)
-
 void rwnx_hwq_process(struct rwnx_hw *rwnx_hw, struct rwnx_hwq *hwq)
 {
     struct rwnx_txq *txq, *next;
-    int user, credit_map = 0;
+    int user;
     bool mu_enable;
 #ifndef CONFIG_ONE_TXQ
     unsigned long flags;
@@ -1242,8 +1240,6 @@ void rwnx_hwq_process(struct rwnx_hw *rwnx_hw, struct rwnx_hwq *hwq)
     hwq->need_processing = false;
 
     mu_enable = rwnx_txq_take_mu_lock(rwnx_hw);
-    if (!mu_enable)
-        credit_map = ALL_HWQ_MASK - 1;
 
     list_for_each_entry_safe(txq, next, &hwq->list, sched_list) {
         struct rwnx_txhdr *txhdr = NULL;

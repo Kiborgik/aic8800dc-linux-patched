@@ -239,10 +239,10 @@ static void ipc_host_tx_cfm_handler(struct ipc_host_env_tag *env,
         void *host_id = env->tx_host_id[queue_idx][user_pos][used_idx_mod];
 
         // Reset the host id in the array
-        env->tx_host_id[queue_idx][user_pos][used_idx_mod] = 0;
+        env->tx_host_id[queue_idx][user_pos][used_idx_mod] = NULL;
 
         // call the external function to indicate that a TX packet is freed
-        if (host_id == 0)
+        if (host_id == NULL)
         {
             // No more confirmations, so put back the used index at its initial value
             env->txdesc_used_idx[queue_idx][user_pos] = used_idx;
@@ -302,10 +302,10 @@ void *ipc_host_tx_flush(struct ipc_host_env_tag *env, const int queue_idx, const
     void *host_id = env->tx_host_id[queue_idx][user_pos][used_idx & nx_txdesc_cnt_msk[queue_idx]];
 
     // call the external function to indicate that a TX packet is freed
-    if (host_id != 0)
+    if (host_id != NULL)
     {
         // Reset the host id in the array
-        env->tx_host_id[queue_idx][user_pos][used_idx & nx_txdesc_cnt_msk[queue_idx]] = 0;
+        env->tx_host_id[queue_idx][user_pos][used_idx & nx_txdesc_cnt_msk[queue_idx]] = NULL;
 
         // Increment the used index
         env->txdesc_used_idx[queue_idx][user_pos]++;

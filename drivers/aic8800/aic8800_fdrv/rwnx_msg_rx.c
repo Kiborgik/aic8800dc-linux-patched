@@ -32,7 +32,7 @@
 
 static int rwnx_freq_to_idx(struct rwnx_hw *rwnx_hw, int freq)
 {
-    struct ieee80211_supported_band *sband;
+    struct ieee80211_supported_band *sband = NULL;
     int band, ch, idx = 0;
 
     for (band = NL80211_BAND_2GHZ; band < NUM_NL80211_BANDS; band++) {
@@ -165,9 +165,9 @@ static inline int rwnx_rx_tdls_chan_switch_ind(struct rwnx_hw *rwnx_hw,
 #ifdef CONFIG_RWNX_FULLMAC
     // Enable traffic on OFF channel queue
     rwnx_txq_offchan_start(rwnx_hw);
+#endif
 
     return 0;
-#endif
 }
 
 static inline int rwnx_rx_tdls_chan_switch_base_ind(struct rwnx_hw *rwnx_hw,
@@ -186,8 +186,9 @@ static inline int rwnx_rx_tdls_chan_switch_base_ind(struct rwnx_hw *rwnx_hw,
             rwnx_txq_tdls_sta_stop(rwnx_vif, RWNX_TXQ_STOP_CHAN, rwnx_hw);
         }
     }
-    return 0;
 #endif
+
+    return 0;
 }
 
 static inline int rwnx_rx_tdls_peer_ps_ind(struct rwnx_hw *rwnx_hw,
@@ -206,9 +207,9 @@ static inline int rwnx_rx_tdls_peer_ps_ind(struct rwnx_hw *rwnx_hw,
             rwnx_ps_bh_enable(rwnx_hw, rwnx_vif->sta.tdls_sta, ps_on);
         }
     }
+#endif
 
     return 0;
-#endif
 }
 
 static inline int rwnx_rx_remain_on_channel_exp_ind(struct rwnx_hw *rwnx_hw,
@@ -702,7 +703,7 @@ static inline int rwnx_rx_scanu_result_ind(struct rwnx_hw *rwnx_hw,
 			AICWFDBG(LOGDEBUG, "%s %02x:%02x:%02x:%02x:%02x:%02x ssid:%s freq:%d timestamp:%ld, %d\r\n", __func__,
 				bss->bssid[0],bss->bssid[1],bss->bssid[2],
 				bss->bssid[3],bss->bssid[4],bss->bssid[5],
-				ssid, freq, (long)mgmt->u.probe_resp.timestamp, ind->rssi);
+				ssid, freq, (long)le64_to_cpu(mgmt->u.probe_resp.timestamp), ind->rssi);
 		}
 		kfree(ssid);
 		ssid = NULL;

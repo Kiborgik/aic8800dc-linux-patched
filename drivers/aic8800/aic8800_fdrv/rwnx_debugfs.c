@@ -1238,7 +1238,6 @@ static ssize_t rwnx_dbgfs_regdbg_write(struct file *file,
 	u32 addr = 0, val = 0, oper = 0xFFFFFFFF;
 	size_t len = min_t(size_t, count, sizeof(buf) - 1);
     	struct dbg_mem_read_cfm mem_read_cfm;
-    	int ret;
 
 	if (copy_from_user(buf, user_buf, len))
 		return -EFAULT;
@@ -1249,7 +1248,7 @@ static ssize_t rwnx_dbgfs_regdbg_write(struct file *file,
 		printk("addr=%x, val=%x,oper=%d\n", addr, val, oper);
 
     	if(oper== 0) {
-		ret = rwnx_send_dbg_mem_read_req(priv, addr, &mem_read_cfm);
+		rwnx_send_dbg_mem_read_req(priv, addr, &mem_read_cfm);
         	printk("[0x%x] = [0x%x]\n", mem_read_cfm.memaddr, mem_read_cfm.memdata);
     	}
 

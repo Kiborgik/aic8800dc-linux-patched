@@ -161,13 +161,11 @@ void aicwf_tx_deinit(struct aicwf_tx_priv* tx_priv)
 
 static bool aicwf_another_ptk(struct sk_buff *skb)
 {
-    u8 *data;
     u16 aggr_len = 0;
 
     if(skb->data == NULL || skb->len == 0) {
         return false;
     }
-    data = skb->data;
     aggr_len = (*skb->data | (*(skb->data + 1) << 8));
     if(aggr_len == 0) {
         return false;

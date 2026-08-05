@@ -62,8 +62,6 @@ static void cmd_complete(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
 
 int cmd_mgr_queue_force_defer(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
 {
-    bool defer_push = false;
-
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 #ifdef CREATE_TRACE_POINTS
     trace_msg_send(cmd->id);
@@ -90,7 +88,6 @@ int cmd_mgr_queue_force_defer(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd
     #endif
 
     cmd->flags |= RWNX_CMD_FLAG_WAIT_PUSH;
-    defer_push = true;
 
     if (cmd->flags & RWNX_CMD_FLAG_REQ_CFM)
         cmd->flags |= RWNX_CMD_FLAG_WAIT_CFM;
