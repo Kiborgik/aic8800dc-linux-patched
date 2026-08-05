@@ -1791,10 +1791,10 @@ int rwnx_send_me_config_req(struct rwnx_hw *rwnx_hw)
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0) || defined(CONFIG_VHT_FOR_OLD_KERNEL)
     if(req->vht_supp) {
     	req->vht_cap.vht_capa_info = cpu_to_le32(vht_cap->cap);
-    	req->vht_cap.rx_highest = cpu_to_le16(vht_cap->vht_mcs.rx_highest);
-    	req->vht_cap.rx_mcs_map = cpu_to_le16(vht_cap->vht_mcs.rx_mcs_map);
-    	req->vht_cap.tx_highest = cpu_to_le16(vht_cap->vht_mcs.tx_highest);
-    	req->vht_cap.tx_mcs_map = cpu_to_le16(vht_cap->vht_mcs.tx_mcs_map);
+    	req->vht_cap.rx_highest = (__force u16_l)vht_cap->vht_mcs.rx_highest;
+    	req->vht_cap.rx_mcs_map = (__force u16_l)vht_cap->vht_mcs.rx_mcs_map;
+    	req->vht_cap.tx_highest = (__force u16_l)vht_cap->vht_mcs.tx_highest;
+    	req->vht_cap.tx_mcs_map = (__force u16_l)vht_cap->vht_mcs.tx_mcs_map;
     }
     #endif
 
@@ -1816,12 +1816,12 @@ int rwnx_send_me_config_req(struct rwnx_hw *rwnx_hw)
 		for (i = 0; i < ARRAY_SIZE(he_cap->he_cap_elem.phy_cap_info); i++) {
 			req->he_cap.phy_cap_info[i] = he_cap->he_cap_elem.phy_cap_info[i];
 		}
-		req->he_cap.mcs_supp.rx_mcs_80 = cpu_to_le16(he_cap->he_mcs_nss_supp.rx_mcs_80);
-		req->he_cap.mcs_supp.tx_mcs_80 = cpu_to_le16(he_cap->he_mcs_nss_supp.tx_mcs_80);
-		req->he_cap.mcs_supp.rx_mcs_160 = cpu_to_le16(he_cap->he_mcs_nss_supp.rx_mcs_160);
-		req->he_cap.mcs_supp.tx_mcs_160 = cpu_to_le16(he_cap->he_mcs_nss_supp.tx_mcs_160);
-		req->he_cap.mcs_supp.rx_mcs_80p80 = cpu_to_le16(he_cap->he_mcs_nss_supp.rx_mcs_80p80);
-		req->he_cap.mcs_supp.tx_mcs_80p80 = cpu_to_le16(he_cap->he_mcs_nss_supp.tx_mcs_80p80);
+		req->he_cap.mcs_supp.rx_mcs_80 = (__force u16_l)he_cap->he_mcs_nss_supp.rx_mcs_80;
+		req->he_cap.mcs_supp.tx_mcs_80 = (__force u16_l)he_cap->he_mcs_nss_supp.tx_mcs_80;
+		req->he_cap.mcs_supp.rx_mcs_160 = (__force u16_l)he_cap->he_mcs_nss_supp.rx_mcs_160;
+		req->he_cap.mcs_supp.tx_mcs_160 = (__force u16_l)he_cap->he_mcs_nss_supp.tx_mcs_160;
+		req->he_cap.mcs_supp.rx_mcs_80p80 = (__force u16_l)he_cap->he_mcs_nss_supp.rx_mcs_80p80;
+		req->he_cap.mcs_supp.tx_mcs_80p80 = (__force u16_l)he_cap->he_mcs_nss_supp.tx_mcs_80p80;
 		for (i = 0; i < MAC_HE_PPE_THRES_MAX_LEN; i++) {
 			req->he_cap.ppe_thres[i] = he_cap->ppe_thres[i];
 		}
@@ -1990,12 +1990,12 @@ int rwnx_send_me_sta_add(struct rwnx_hw *rwnx_hw, struct station_parameters *par
 
 
         req->flags |= STA_HT_CAPA;
-        req->ht_cap.ht_capa_info = cpu_to_le16(ht_capa->cap_info);
+        req->ht_cap.ht_capa_info = (__force u16_l)ht_capa->cap_info;
         req->ht_cap.a_mpdu_param = ht_capa->ampdu_params_info;
         for (i = 0; i < sizeof(ht_capa->mcs); i++)
             req->ht_cap.mcs_rate[i] = ht_mcs[i];
-        req->ht_cap.ht_extended_capa = cpu_to_le16(ht_capa->extended_ht_cap_info);
-        req->ht_cap.tx_beamforming_capa = cpu_to_le32(ht_capa->tx_BF_cap_info);
+        req->ht_cap.ht_extended_capa = (__force u16_l)ht_capa->extended_ht_cap_info;
+        req->ht_cap.tx_beamforming_capa = (__force u32_l)ht_capa->tx_BF_cap_info;
         req->ht_cap.asel_capa = ht_capa->antenna_selection_info;
     }
 
@@ -2008,22 +2008,22 @@ int rwnx_send_me_sta_add(struct rwnx_hw *rwnx_hw, struct station_parameters *par
 		const struct ieee80211_vht_cap *vht_capa = params->link_sta_params.vht_capa;
 #endif//LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
         req->flags |= STA_VHT_CAPA;
-        req->vht_cap.vht_capa_info = cpu_to_le32(vht_capa->vht_cap_info);
-        req->vht_cap.rx_highest = cpu_to_le16(vht_capa->supp_mcs.rx_highest);
-        req->vht_cap.rx_mcs_map = cpu_to_le16(vht_capa->supp_mcs.rx_mcs_map);
-        req->vht_cap.tx_highest = cpu_to_le16(vht_capa->supp_mcs.tx_highest);
-        req->vht_cap.tx_mcs_map = cpu_to_le16(vht_capa->supp_mcs.tx_mcs_map);
+        req->vht_cap.vht_capa_info = (__force u32_l)vht_capa->vht_cap_info;
+        req->vht_cap.rx_highest = (__force u16_l)vht_capa->supp_mcs.rx_highest;
+        req->vht_cap.rx_mcs_map = (__force u16_l)vht_capa->supp_mcs.rx_mcs_map;
+        req->vht_cap.tx_highest = (__force u16_l)vht_capa->supp_mcs.tx_highest;
+        req->vht_cap.tx_mcs_map = (__force u16_l)vht_capa->supp_mcs.tx_mcs_map;
     }
 #elif defined(CONFIG_VHT_FOR_OLD_KERNEL)
     if (sta->vht) {
         const struct ieee80211_vht_cap *vht_capa = rwnx_vht_capa;
 
         req->flags |= STA_VHT_CAPA;
-        req->vht_cap.vht_capa_info = cpu_to_le32(vht_capa->vht_cap_info);
-        req->vht_cap.rx_highest = cpu_to_le16(vht_capa->supp_mcs.rx_highest);
-        req->vht_cap.rx_mcs_map = cpu_to_le16(vht_capa->supp_mcs.rx_mcs_map);
-        req->vht_cap.tx_highest = cpu_to_le16(vht_capa->supp_mcs.tx_highest);
-        req->vht_cap.tx_mcs_map = cpu_to_le16(vht_capa->supp_mcs.tx_mcs_map);
+        req->vht_cap.vht_capa_info = (__force u32_l)vht_capa->vht_cap_info;
+        req->vht_cap.rx_highest = (__force u16_l)vht_capa->supp_mcs.rx_highest;
+        req->vht_cap.rx_mcs_map = (__force u16_l)vht_capa->supp_mcs.rx_mcs_map;
+        req->vht_cap.tx_highest = (__force u16_l)vht_capa->supp_mcs.tx_highest;
+        req->vht_cap.tx_mcs_map = (__force u16_l)vht_capa->supp_mcs.tx_mcs_map;
     }
 #endif
 

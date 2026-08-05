@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 # Ratchet, not a clean-tree gate: W=1 on this vendor code is far too noisy to
 # demand zero warnings, so this only fails when a patch pushes a count past the
 # ceiling in .github/analysis-baseline.

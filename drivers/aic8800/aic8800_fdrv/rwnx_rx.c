@@ -327,12 +327,10 @@ static void rwnx_rx_data_skb_resend(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rw
 {
 	struct sk_buff *rx_skb = skb;
 	//bool amsdu = rxhdr->flags_is_amsdu;
-	const struct ethhdr *eth;
 	struct sk_buff *skb_copy;
 
 	rx_skb->dev = rwnx_vif->ndev;
 	skb_reset_mac_header(rx_skb);
-	eth = eth_hdr(rx_skb);
 
     //printk("resend\n");
 	/* resend pkt on wireless interface */
@@ -1370,7 +1368,6 @@ static int reord_flush_tid(struct aicwf_rx_priv *rx_priv, struct sk_buff *skb, u
     u8 found = 0;
     struct list_head *phead, *plist;
     struct recv_msdu *prframe;
-    int ret;
 
     if((rwnx_vif->wdev.iftype == NL80211_IFTYPE_STATION) || (rwnx_vif->wdev.iftype == NL80211_IFTYPE_P2P_CLIENT))
         mac = eh->h_dest;
@@ -1415,9 +1412,9 @@ static int reord_flush_tid(struct aicwf_rx_priv *rx_priv, struct sk_buff *skb, u
     spin_unlock_irqrestore(&preorder_ctrl->reord_list_lock, flags);
     if (timer_pending(&preorder_ctrl->reord_timer))
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
-		ret = timer_delete_sync(&preorder_ctrl->reord_timer);
+		timer_delete_sync(&preorder_ctrl->reord_timer);
 #else
-        ret = del_timer_sync(&preorder_ctrl->reord_timer);
+        del_timer_sync(&preorder_ctrl->reord_timer);
 #endif
     cancel_work_sync(&preorder_ctrl->reord_timer_work);
 
@@ -1429,7 +1426,6 @@ void reord_deinit_sta(struct aicwf_rx_priv* rx_priv, struct reord_ctrl_info *reo
     u8 i = 0;
     //unsigned long flags;
     struct reord_ctrl *preorder_ctrl = NULL;
-    int ret;
 
     if (rx_priv == NULL) {
         txrx_err("bad rx_priv!\n");
@@ -1445,9 +1441,9 @@ void reord_deinit_sta(struct aicwf_rx_priv* rx_priv, struct reord_ctrl_info *reo
 			preorder_ctrl->enable = false;
 	        if (timer_pending(&preorder_ctrl->reord_timer)) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
-			    ret = timer_delete_sync(&preorder_ctrl->reord_timer);
+			    timer_delete_sync(&preorder_ctrl->reord_timer);
 #else
-	            ret = del_timer_sync(&preorder_ctrl->reord_timer);
+	            del_timer_sync(&preorder_ctrl->reord_timer);
 #endif
 	        }
 	        cancel_work_sync(&preorder_ctrl->reord_timer_work);
@@ -1998,7 +1994,7 @@ u8 rwnx_rxdataind_aicwf(struct rwnx_hw *rwnx_hw, void *hostid, void *rx_priv)
             skb->data += (msdu_offset + 2); //sdio/usb word allign
 
             //Save frame length
-            frm_len = le32_to_cpu(hw_rxhdr->hwvect.len);
+            frm_len = le32_to_cpu((__force __le32)hw_rxhdr->hwvect.len);
 
             // Reserve space for frame
             skb->len = frm_len;

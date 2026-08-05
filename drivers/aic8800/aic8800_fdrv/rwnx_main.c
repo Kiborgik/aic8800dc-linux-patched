@@ -2613,7 +2613,7 @@ static struct net_device_stats *rwnx_get_stats(struct net_device *dev)
  *	Called to decide which queue to when device supports multiple
  *	transmit queues.
  */
-u16 rwnx_select_queue(struct net_device *dev, struct sk_buff *skb,
+static u16 rwnx_select_queue(struct net_device *dev, struct sk_buff *skb,
                       struct net_device *sb_dev)
 {
     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
@@ -4690,7 +4690,6 @@ static int rwnx_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
 {
     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
-    struct rwnx_sta *sta;
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 
@@ -4717,7 +4716,6 @@ static int rwnx_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
     }
 
     /* delete BC/MC STA */
-    sta = &rwnx_hw->sta_table[rwnx_vif->ap.bcmc_index];
     rwnx_txq_vif_deinit(rwnx_hw, rwnx_vif);
     rwnx_del_bcn(&rwnx_vif->ap.bcn);
     rwnx_del_csa(rwnx_vif);
