@@ -2353,7 +2353,10 @@ int rwnx_send_sm_connect_req(struct rwnx_hw *rwnx_hw,
 	rwnx_vif->sta.ssid_len = (int)sme->ssid_len;
 	memset(rwnx_vif->sta.ssid, 0, rwnx_vif->sta.ssid_len + 1);
 	memcpy(rwnx_vif->sta.ssid, sme->ssid, rwnx_vif->sta.ssid_len);
-	memcpy(rwnx_vif->sta.bssid, sme->bssid, ETH_ALEN);
+	if (sme->bssid)
+		memcpy(rwnx_vif->sta.bssid, sme->bssid, ETH_ALEN);
+	else
+		memset(rwnx_vif->sta.bssid, 0, ETH_ALEN);
 
 	AICWFDBG(LOGINFO, "%s drv_vif_index:%d connect to %s(%d) channel:%d auth_type:%d\r\n",
 		__func__,
