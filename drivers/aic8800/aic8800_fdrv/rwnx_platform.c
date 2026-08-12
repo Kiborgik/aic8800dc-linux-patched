@@ -63,7 +63,7 @@ typedef struct
     xtal_cap_conf_t xtal_cap;
 } userconfig_info_t;
 
-userconfig_info_t userconfig_info = {
+static userconfig_info_t userconfig_info = {
     .txpwr_lvl = {
         .enable           = 1,
         .dsss             = 9,

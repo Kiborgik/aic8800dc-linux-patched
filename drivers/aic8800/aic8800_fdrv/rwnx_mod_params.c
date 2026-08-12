@@ -229,12 +229,12 @@ module_param_named(dpsm, rwnx_mod_params.dpsm, bool, S_IRUGO);
 MODULE_PARM_DESC(dpsm, "Enable Dynamic PowerSaving (Default: 1-Enabled)");
 
 #ifdef DEFAULT_COUNTRY_CODE
-char default_ccode[4] = DEFAULT_COUNTRY_CODE;
+static char default_ccode[4] = DEFAULT_COUNTRY_CODE;
 #else
-char default_ccode[4] = "00";
+static char default_ccode[4] = "00";
 #endif
 
-char country_code[4];
+static char country_code[4];
 module_param_string(country_code, country_code, 4, 0600);
 
 #define RWNX_REG_RULE(start, end, bw, reg_flags) REG_RULE(start, end, bw, 0, 0, reg_flags)
@@ -262,8 +262,8 @@ static const int mcs_map_to_rate[4][3] = {
 
 extern struct ieee80211_regdomain *reg_regdb[];
 
-char ccode_channels[200];
-int index_for_channel_list = 0;
+static char ccode_channels[200];
+static int index_for_channel_list = 0;
 module_param_string(ccode_channels, ccode_channels, 200, 0600);
 
 static void rwnx_get_countrycode_channels(struct wiphy *wiphy,

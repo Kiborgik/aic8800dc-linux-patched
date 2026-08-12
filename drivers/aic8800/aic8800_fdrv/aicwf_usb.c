@@ -46,7 +46,7 @@ int busrx_thread_prio = 1;
 module_param(busrx_thread_prio, int, 0);
 #endif
 
-atomic_t rx_urb_cnt;
+static atomic_t rx_urb_cnt;
 
 void aicwf_usb_tx_flowctrl(struct rwnx_hw *rwnx_hw, bool state)
 {
@@ -1325,7 +1325,7 @@ static void aicwf_usb_state_change(struct aic_usb_dev *usb_dev, int state)
     }
 }
 
-int align_param = 8;
+static int align_param = 8;
 module_param(align_param, int, 0660);
 
 static void usb_tx_flow_ctrl(struct rwnx_txhdr *txhdr, struct aic_usb_dev *usb_dev, struct rwnx_hw *rwnx_hw)

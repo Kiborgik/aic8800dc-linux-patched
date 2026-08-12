@@ -1640,7 +1640,7 @@ static void reord_rxframes_ind(struct aicwf_rx_priv *rx_priv,
 	//spin_unlock_bh(&preorder_ctrl->reord_list_lock);//AIDEN
 }
 
-int reorder_timeout = REORDER_UPDATE_TIME;
+static int reorder_timeout = REORDER_UPDATE_TIME;
 module_param(reorder_timeout, int, 0660);
 
 

@@ -39,7 +39,7 @@ void rwnx_release_firmware_common(u32** buffer);
 
 typedef u32 (*array2_tbl_t)[2];
 
-u32 syscfg_tbl_masked_8800dc[][3] = {
+static u32 syscfg_tbl_masked_8800dc[][3] = {
     //#ifdef CONFIG_PMIC_SETTING
     #if defined(CONFIG_VRF_DCDC_MODE)
     {0x7000216C, (0x3 << 2), (0x1 << 2)}, // pmic_pmu_init
@@ -63,7 +63,7 @@ u32 syscfg_tbl_masked_8800dc[][3] = {
     {0x00000000, 0x00000000, 0x00000000}, // last one
 };
 
-u32 syscfg_tbl_masked_8800dc_u01[][3] = {
+static u32 syscfg_tbl_masked_8800dc_u01[][3] = {
     //#ifdef CONFIG_PMIC_SETTING
     {0x70001000, (0x1 << 16), (0x1 << 16)}, // for low temperature
     {0x70001028, (0x1 << 6), (0x1 << 6)},
@@ -72,13 +72,13 @@ u32 syscfg_tbl_masked_8800dc_u01[][3] = {
 };
 
 
-u32 syscfg_tbl_8800dc[][2] = {
+static u32 syscfg_tbl_8800dc[][2] = {
     {0x40500010, 0x00000004},
     {0x40500010, 0x00000006},//160m clk
 };
 
 
-u32 patch_tbl_wifisetting[][2] =
+static u32 patch_tbl_wifisetting[][2] =
 {
     {0x0004, 0x00020010}, //wdt_reboot_type, wdt_period_sec
     #if !defined(CONFIG_FPGA_VERIFICATION)
@@ -92,7 +92,7 @@ u32 patch_tbl_wifisetting[][2] =
 	{0x0084, 0x00000040},
 };
 
-u32 jump_tbl[][2] =
+static u32 jump_tbl[][2] =
 {
     {296, 0x180001},
     {137, 0x180011},
@@ -103,7 +103,7 @@ u32 jump_tbl[][2] =
 };
 
 
-uint32_t ldpc_cfg_ram[] = {
+static uint32_t ldpc_cfg_ram[] = {
     #ifdef CONFIG_FPGA_VERIFICATION
     0x00363638,
     0x1DF8F834,
@@ -780,7 +780,7 @@ uint32_t ldpc_cfg_ram[] = {
 };
 
 
-uint32_t agc_cfg_ram[] = {
+static uint32_t agc_cfg_ram[] = {
     0x20000000,
     0x0400000E,
     0x3000200E,
@@ -1295,7 +1295,7 @@ uint32_t agc_cfg_ram[] = {
     0x00000000
 };
 
-uint32_t txgain_map[96] =  {
+static uint32_t txgain_map[96] =  {
     #ifdef CONFIG_FPGA_VERIFICATION
     0x20c0c971,
     0x20c0c980,
@@ -1495,20 +1495,20 @@ uint32_t txgain_map[96] =  {
 #endif
 };
 
-u32 patch_tbl_func[][2] =
+static u32 patch_tbl_func[][2] =
 {
     {0x00110054, 0x0018186D}, // same as jump_tbl idx 168
     {0x0011005C, 0x0018186D}, // same as jump_tbl idx 168
 };
 
 
-u32 patch_tbl_rf_func[][2] =
+static u32 patch_tbl_rf_func[][2] =
 {
     {0x00110bf0, 0x00180001},
 };
 
 
-uint32_t txgain_table[32] =
+static uint32_t txgain_table[32] =
 {
     0xA4B22189, //index 0
     0x00007825,
@@ -1544,7 +1544,7 @@ uint32_t txgain_table[32] =
     0x00004832
 };
 
-u32 txgain_table_1[32] =
+static u32 txgain_table_1[32] =
 {
     0x090E2011, //index 0
     0x00004001,
@@ -1580,7 +1580,7 @@ u32 txgain_table_1[32] =
     0x00004001
 };
 
-u32 wifi_rxgain_table_24g_20m_8800dcdw[64] = {
+static u32 wifi_rxgain_table_24g_20m_8800dcdw[64] = {
     0x82f282d1,//index 0
     0x9591a324,
     0x80808419,
@@ -1649,7 +1649,7 @@ u32 wifi_rxgain_table_24g_20m_8800dcdw[64] = {
 
 
 
-uint32_t rxgain_table_24g_40m[64] = {
+static uint32_t rxgain_table_24g_40m[64] = {
     0x83428151,//index 0
     0x9631a328,
     0x80808419,
