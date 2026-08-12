@@ -1,6 +1,7 @@
 # AIC8800DC Linux Driver (Patched)
 
 [![6.12 LTS](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-6.12-lts.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-6.12-lts.yml)
+[![6.18](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-6.18.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-6.18.yml)
 [![7.1 stable](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-7.1.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-7.1.yml)
 [![latest](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-latest.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-latest.yml)
 [![mainline rc](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-mainline-rc.yml/badge.svg)](https://github.com/Kiborgik/aic8800dc-linux-patched/actions/workflows/kernel-mainline-rc.yml)
