@@ -114,6 +114,7 @@ struct aic_usb_dev {
     enum aicwf_usb_state state;
 
     struct usb_anchor rx_submitted;
+    struct usb_anchor tx_submitted;
     struct work_struct rx_urb_work;
 
     spinlock_t rx_free_lock;

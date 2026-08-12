@@ -112,6 +112,7 @@ struct aic_usb_dev {
 #endif
 
     struct usb_anchor rx_submitted;
+    struct usb_anchor tx_submitted;
     struct work_struct rx_urb_work;
 #ifdef CONFIG_USB_MSG_IN_EP
 	struct usb_anchor msg_rx_submitted;

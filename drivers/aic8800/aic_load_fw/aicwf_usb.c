@@ -284,8 +284,10 @@ static void aicwf_usb_tx_process(struct aic_usb_dev *usb_dev)
             return;
         }
 
+        usb_anchor_urb(usb_buf->urb, &usb_dev->tx_submitted);
         ret = usb_submit_urb(usb_buf->urb, GFP_ATOMIC);
         if (ret) {
+            usb_unanchor_urb(usb_buf->urb);
             usb_err("aicwf_usb_bus_tx usb_submit_urb FAILED\n");
             goto fail;
         }
@@ -460,20 +462,23 @@ static void aicwf_usb_free_urb(struct list_head *q, spinlock_t *qlock)
 {
     struct aicwf_usb_buf *usb_buf, *tmp;
     unsigned long flags;
+    LIST_HEAD(to_free);
 
+    /* usb_free_urb() can sleep, so it cannot run under qlock, and the cursor
+     * of a list_for_each_entry_safe() only survives while the lock is held. */
     spin_lock_irqsave(qlock, flags);
-    list_for_each_entry_safe(usb_buf, tmp, q, list) {
+    list_splice_init(q, &to_free);
     spin_unlock_irqrestore(qlock, flags);
+
+    list_for_each_entry_safe(usb_buf, tmp, &to_free, list) {
+        list_del_init(&usb_buf->list);
         if (!usb_buf->urb) {
             usb_err("bad usb_buf\n");
-            spin_lock_irqsave(qlock, flags);
-            break;
+            continue;
         }
         usb_free_urb(usb_buf->urb);
-        list_del_init(&usb_buf->list);
-        spin_lock_irqsave(qlock, flags);
+        usb_buf->urb = NULL;
     }
-    spin_unlock_irqrestore(qlock, flags);
 }
 
 static int aicwf_usb_alloc_rx_urb(struct aic_usb_dev *usb_dev)
@@ -618,25 +623,14 @@ static int aicwf_usb_bus_start(struct device *dev)
 
 static void aicwf_usb_cancel_all_urbs(struct aic_usb_dev *usb_dev)
 {
-    struct aicwf_usb_buf *usb_buf, *tmp;
-    unsigned long flags;
-
     if (usb_dev->msg_out_urb)
         usb_kill_urb(usb_dev->msg_out_urb);
 
-    spin_lock_irqsave(&usb_dev->tx_post_lock, flags);
-    list_for_each_entry_safe(usb_buf, tmp, &usb_dev->tx_post_list, list) {
-        spin_unlock_irqrestore(&usb_dev->tx_post_lock, flags);
-        if (!usb_buf->urb) {
-            usb_err("bad usb_buf\n");
-            spin_lock_irqsave(&usb_dev->tx_post_lock, flags);
-            break;
-        }
-        usb_kill_urb(usb_buf->urb);
-        spin_lock_irqsave(&usb_dev->tx_post_lock, flags);
-    }
-    spin_unlock_irqrestore(&usb_dev->tx_post_lock, flags);
-
+    /* Killing the tx_post_list did nothing: aicwf_usb_tx_dequeue() unlinks a
+     * buffer before it is submitted, so in-flight URBs were on no list at all
+     * and outlived the disconnect. Kill rather than poison, because this runs
+     * on the suspend path too and the anchor has to work again after resume. */
+    usb_kill_anchored_urbs(&usb_dev->tx_submitted);
     usb_kill_anchored_urbs(&usb_dev->rx_submitted);
 }
 
@@ -680,6 +674,7 @@ static int aicwf_usb_init(struct aic_usb_dev *usb_dev)
 
     init_waitqueue_head(&usb_dev->msg_wait);
     init_usb_anchor(&usb_dev->rx_submitted);
+    init_usb_anchor(&usb_dev->tx_submitted);
 
     spin_lock_init(&usb_dev->tx_free_lock);
     spin_lock_init(&usb_dev->tx_post_lock);
