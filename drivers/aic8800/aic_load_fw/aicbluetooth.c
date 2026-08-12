@@ -907,10 +907,7 @@ int rwnx_plat_userconfig_upload_android(char *filename){
 
 	rwnx_plat_userconfig_parsing((char *)dst, size);
 
-	if (dst) {
-        vfree(dst);
-        dst = NULL;
-    }
+	vfree(dst);
 
 	printk("userconfig download complete\n\n");
 	return 0;
