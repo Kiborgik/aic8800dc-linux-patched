@@ -1759,7 +1759,7 @@ int aicwf_patch_table_load(struct rwnx_hw *rwnx_hw, char *filename)
 
     if (!err && (i < size)) {
         for (i =(128/4); i < (size/4); i +=2) {
-            AICWFDBG(LOGERROR, "patch_tbl:  %x  %x\n", dst[i], dst[i+1]);
+            AICWFDBG(LOGDEBUG, "patch_tbl:  %x  %x\n", dst[i], dst[i+1]);
             err = rwnx_send_dbg_mem_write_req(rwnx_hw, dst[i], dst[i+1]);
         }
         if (err) {
@@ -1841,7 +1841,7 @@ void aicwf_patch_config_8800dc(struct rwnx_hw *rwnx_hw)
        AICWFDBG(LOGINFO, "wifisetting_cfg_addr=%x, ldpc_cfg_addr=%x, agc_cfg_addr=%x, txgain_cfg_addr=%x\n", wifisetting_cfg_addr, ldpc_cfg_addr, agc_cfg_addr, txgain_cfg_addr);
 
         for (cnt = 0; cnt < patch_tbl_wifisetting_num; cnt++) {
-            printk("patch %x = %x\n", wifisetting_cfg_addr + patch_tbl_wifisetting[cnt][0],
+            AICWFDBG(LOGDEBUG, "patch %x = %x\n", wifisetting_cfg_addr + patch_tbl_wifisetting[cnt][0],
                 patch_tbl_wifisetting[cnt][1]);
             if ((ret = rwnx_send_dbg_mem_write_req(rwnx_hw, wifisetting_cfg_addr + patch_tbl_wifisetting[cnt][0], patch_tbl_wifisetting[cnt][1]))) {
                 AICWFDBG(LOGERROR, "wifisetting %x write fail\n", patch_tbl_wifisetting[cnt][0]);
