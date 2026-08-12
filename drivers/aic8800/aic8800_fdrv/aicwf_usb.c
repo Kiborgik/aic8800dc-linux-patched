@@ -901,8 +901,10 @@ static void aicwf_usb_tx_process(struct aic_usb_dev *usb_dev)
             return;
         }
 
+        usb_anchor_urb(usb_buf->urb, &usb_dev->tx_submitted);
         ret = usb_submit_urb(usb_buf->urb, GFP_ATOMIC);
         if (ret) {
+            usb_unanchor_urb(usb_buf->urb);
             AICWFDBG(LOGERROR, "aicwf_usb_bus_tx usb_submit_urb FAILED err:%d\n", ret);
             #ifdef CONFIG_USB_TX_AGGR
             aicwf_usb_tx_queue(usb_dev, &usb_dev->tx_post_list, usb_buf,
@@ -1156,21 +1158,29 @@ static void aicwf_usb_free_urb(struct list_head *q, spinlock_t *qlock)
 {
     struct aicwf_usb_buf *usb_buf, *tmp;
     unsigned long flags;
+    LIST_HEAD(to_free);
 
+    /* Take the whole list first: usb_free_urb() and the buffer frees below
+     * can sleep, so they cannot run under qlock, and the cursor of a
+     * list_for_each_entry_safe() is only valid while the lock is held. */
     spin_lock_irqsave(qlock, flags);
-    list_for_each_entry_safe(usb_buf, tmp, q, list) {
+    list_splice_init(q, &to_free);
     spin_unlock_irqrestore(qlock, flags);
+
+    list_for_each_entry_safe(usb_buf, tmp, &to_free, list) {
+        list_del_init(&usb_buf->list);
         if (!usb_buf->urb) {
             usb_err("bad usb_buf\n");
-            spin_lock_irqsave(qlock, flags);
-            break;
+            continue;
         }
         #ifdef CONFIG_USB_TX_AGGR
         if (usb_buf->skb) {
             dev_kfree_skb(usb_buf->skb);
+            usb_buf->skb = NULL;
         }
         #endif
         usb_free_urb(usb_buf->urb);
+        usb_buf->urb = NULL;
         #if defined CONFIG_USB_NO_TRANS_DMA_MAP
         // free dma buf if needed
         if (usb_buf->data_buf) {
@@ -1183,10 +1193,7 @@ static void aicwf_usb_free_urb(struct list_head *q, spinlock_t *qlock)
             usb_buf->data_dma_trans_addr = 0x0;
         }
         #endif
-        list_del_init(&usb_buf->list);
-        spin_lock_irqsave(qlock, flags);
     }
-    spin_unlock_irqrestore(qlock, flags);
 }
 
 static int aicwf_usb_alloc_rx_urb(struct aic_usb_dev *usb_dev)
@@ -1547,45 +1554,48 @@ static void aicwf_usb_cancel_all_urbs_(struct aic_usb_dev *usb_dev)
 {
     struct aicwf_usb_buf *usb_buf, *tmp;
     unsigned long flags;
+    LIST_HEAD(post_drain);
 
     if (usb_dev->msg_out_urb)
         usb_kill_urb(usb_dev->msg_out_urb);
 
-    spin_lock_irqsave(&usb_dev->tx_post_lock, flags);
-    list_for_each_entry_safe(usb_buf, tmp, &usb_dev->tx_post_list, list) {
-        spin_unlock_irqrestore(&usb_dev->tx_post_lock, flags);
-        if (!usb_buf->urb) {
-            usb_err("bad usb_buf\n");
-            spin_lock_irqsave(&usb_dev->tx_post_lock, flags);
-            break;
-        }
-        usb_kill_urb(usb_buf->urb);
-        #if defined CONFIG_USB_NO_TRANS_DMA_MAP
-        // free dma buf if needed
-        if (usb_buf->data_buf) {
-            #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
-            usb_free_coherent(usb_buf->usbdev->udev, DATA_BUF_MAX, usb_buf->data_buf, usb_buf->data_dma_trans_addr);
-            #else
-            usb_buffer_free(usb_buf->usbdev->udev, DATA_BUF_MAX, usb_buf->data_buf, usb_buf->data_dma_trans_addr);
-            #endif
-            usb_buf->data_buf = NULL;
-            usb_buf->data_dma_trans_addr = 0x0;
-        } else {
-            usb_err("bad usb dma buf\n");
-            spin_lock_irqsave(&usb_dev->tx_post_lock, flags);
-            break;
-        }
-        #endif
-        spin_lock_irqsave(&usb_dev->tx_post_lock, flags);
-    }
-    spin_unlock_irqrestore(&usb_dev->tx_post_lock, flags);
-
-    usb_kill_anchored_urbs(&usb_dev->rx_submitted);
+    /* Poison instead of kill: aicwf_usb_tx_process() can be past its
+     * USB_UP_ST check by the time we get here, and a poisoned anchor makes
+     * its submit fail instead of leaving a fresh URB in flight behind us. */
+    usb_poison_anchored_urbs(&usb_dev->tx_submitted);
+    usb_poison_anchored_urbs(&usb_dev->rx_submitted);
 #ifdef CONFIG_USB_MSG_IN_EP
 	if(usb_dev->chipid != PRODUCT_ID_AIC8801){
-   		usb_kill_anchored_urbs(&usb_dev->msg_rx_submitted);
+   		usb_poison_anchored_urbs(&usb_dev->msg_rx_submitted);
 	}
 #endif
+
+    /* Buffers queued for TX but never submitted. The state check in
+     * aicwf_usb_tx_process() stops the queue draining itself. */
+    spin_lock_irqsave(&usb_dev->tx_post_lock, flags);
+    list_splice_init(&usb_dev->tx_post_list, &post_drain);
+    usb_dev->tx_post_count = 0;
+    spin_unlock_irqrestore(&usb_dev->tx_post_lock, flags);
+
+    list_for_each_entry_safe(usb_buf, tmp, &post_drain, list) {
+        list_del_init(&usb_buf->list);
+        #ifndef CONFIG_USB_TX_AGGR
+        if (usb_buf->skb) {
+            /* Same ownership split as aicwf_usb_tx_complete(). */
+            if (usb_buf->cfm == false) {
+                dev_kfree_skb_any(usb_buf->skb);
+            }
+            #if !defined CONFIG_USB_NO_TRANS_DMA_MAP
+            else {
+                kfree((u8 *)usb_buf->skb);
+            }
+            #endif
+            usb_buf->skb = NULL;
+        }
+        #endif
+        aicwf_usb_tx_queue(usb_dev, &usb_dev->tx_free_list, usb_buf,
+                    &usb_dev->tx_free_count, &usb_dev->tx_free_lock);
+    }
 }
 
 void aicwf_usb_cancel_all_urbs(struct aic_usb_dev *usb_dev){
@@ -1621,6 +1631,10 @@ static void aicwf_usb_deinit(struct aic_usb_dev *usbdev)
 	}
 #endif
 
+    /* The kill in aicwf_usb_cancel_all_urbs_() leaves this URB reusable, and
+     * rwnx_cfg80211_deinit() still sends firmware messages after it, so it
+     * can be in flight again by now. */
+    usb_kill_urb(usbdev->msg_out_urb);
     usb_free_urb(usbdev->msg_out_urb);
 }
 
@@ -1649,6 +1663,7 @@ static int aicwf_usb_init(struct aic_usb_dev *usb_dev)
 
     init_waitqueue_head(&usb_dev->msg_wait);
     init_usb_anchor(&usb_dev->rx_submitted);
+    init_usb_anchor(&usb_dev->tx_submitted);
 #ifdef CONFIG_USB_MSG_IN_EP
 	if(usb_dev->chipid != PRODUCT_ID_AIC8801){
 		init_usb_anchor(&usb_dev->msg_rx_submitted);
