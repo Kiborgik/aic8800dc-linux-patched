@@ -6636,6 +6636,14 @@ static void rwnx_wdev_unregister(struct rwnx_hw *rwnx_hw)
 
     rtnl_lock();
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    /* Close every netdev before taking wiphy->mtx. cfg80211_unregister_wdev()
+     * unregisters a still-UP netdev from inside our locked section, and the
+     * cfg80211 netdev notifier takes wiphy->mtx itself for NETDEV_GOING_DOWN
+     * and NETDEV_DOWN - only NETDEV_UNREGISTER is guarded by wdev->registered.
+     * A surprise USB disconnect with wlan0 up therefore hangs hub_event in
+     * __mutex_lock forever. ieee80211_remove_interfaces() shuts its
+     * interfaces down the same way before its own wiphy lock. */
+    cfg80211_shutdown_all_interfaces(rwnx_hw->wiphy);
     /* cfg80211_unregister_wdev() (now called via rwnx_cfg80211_del_iface)
      * asserts wiphy->mtx held on 5.12+. The cfg80211 ops path holds it for
      * us; on this driver-internal teardown path (module unload / USB
