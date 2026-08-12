@@ -11,6 +11,7 @@
  */
 
 #include "lmac_msg.h"
+#include "rwnx_strs.h"
 
 static const char *const rwnx_mmid2str[MSG_I(MM_MAX)] = {
     [MSG_I(MM_RESET_REQ)]                 = "MM_RESET_REQ",

@@ -23,7 +23,7 @@
 #include "rwnx_strs.h"
 
 
-const struct mac_addr mac_addr_bcst = {{0xFFFF, 0xFFFF, 0xFFFF}};
+static const struct mac_addr mac_addr_bcst = {{0xFFFF, 0xFFFF, 0xFFFF}};
 
 /* Default MAC Rx filters that can be changed by mac80211
  * (via the configure_filter() callback) */
@@ -71,14 +71,14 @@ const int chnl2bw[] = {
 #define RWNX_CMD_HIGH_WATER_SIZE RWNX_CMD_ARRAY_SIZE/2
 //#define RWNX_MSG_ARRAY_SIZE 20
 
-struct rwnx_cmd cmd_array[RWNX_CMD_ARRAY_SIZE];
+static struct rwnx_cmd cmd_array[RWNX_CMD_ARRAY_SIZE];
 //struct lmac_msg msg_array[RWNX_MSG_ARRAY_SIZE];
 
 static spinlock_t cmd_array_lock;
 //static spinlock_t msg_array_lock;
 
 //int msg_array_index = 0;
-int cmd_array_index = 0;
+static int cmd_array_index = 0;
 
 
 

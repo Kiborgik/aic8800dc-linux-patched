@@ -45,7 +45,7 @@ const int nx_txdesc_cnt[] =
     #endif
 };
 
-const int nx_txdesc_cnt_msk[] =
+static const int nx_txdesc_cnt_msk[] =
 {
     NX_TXDESC_CNT0 - 1,
     NX_TXDESC_CNT1 - 1,

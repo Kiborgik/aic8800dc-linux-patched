@@ -14,7 +14,7 @@
 #define PRINT 2
 #define GET_VALUE 3
 
-txpwr_idx_conf_t userconfig_txpwr_idx = {
+static txpwr_idx_conf_t userconfig_txpwr_idx = {
 	.enable 		  = 1,
 	.dsss			  = 9,
 	.ofdmlowrate_2g4  = 8,
@@ -28,7 +28,7 @@ txpwr_idx_conf_t userconfig_txpwr_idx = {
 
 };
 
-txpwr_ofst_conf_t userconfig_txpwr_ofst = {
+static txpwr_ofst_conf_t userconfig_txpwr_ofst = {
 	.enable = 1,
 	.chan_1_4 = 0,
 	.chan_5_9 = 0,
@@ -39,7 +39,7 @@ txpwr_ofst_conf_t userconfig_txpwr_ofst = {
 	.chan_142_165 = 0
 };
 
-xtal_cap_conf_t userconfig_xtal_cap = {
+static xtal_cap_conf_t userconfig_xtal_cap = {
 	.enable = 0,
 	.xtal_cap = 24,
 	.xtal_cap_fine = 31,
@@ -145,7 +145,7 @@ static const char* aic_default_fw_path = "/lib/firmware";
 #else
 static const char* aic_default_fw_path = "/vendor/etc/firmware";
 #endif
-char aic_fw_path[FW_PATH_MAX];
+static char aic_fw_path[FW_PATH_MAX];
 module_param_string(aic_fw_path, aic_fw_path, FW_PATH_MAX, 0660);
 #ifdef CONFIG_M2D_OTA_AUTO_SUPPORT
 char saved_sdk_ver[64];
@@ -907,10 +907,7 @@ int rwnx_plat_userconfig_upload_android(char *filename){
 
 	rwnx_plat_userconfig_parsing((char *)dst, size);
 
-	if (dst) {
-        vfree(dst);
-        dst = NULL;
-    }
+	vfree(dst);
 
 	printk("userconfig download complete\n\n");
 	return 0;
@@ -932,7 +929,7 @@ static int aicbt_patch_table_free(struct aicbt_patch_table **head)
 	return 0;
 }
 
-struct aicbsp_info_t aicbsp_info = {
+static struct aicbsp_info_t aicbsp_info = {
     .hwinfo   = AICBSP_HWINFO_DEFAULT,
     .cpmode   = AICBSP_CPMODE_DEFAULT,
 };

@@ -805,8 +805,6 @@ int aicwf_sdio_send(struct aicwf_tx_priv *tx_priv)
         atomic_dec(&sdiodev->tx_priv->tx_pktcnt);
         spin_unlock_bh(&sdiodev->tx_priv->txqlock);
 
-        if(tx_priv==NULL || tx_priv->tail==NULL || pkt==NULL)
-            txrx_err("null error\n");
         if (aicwf_sdio_aggr(tx_priv, pkt)) {
             aicwf_sdio_aggrbuf_reset(tx_priv);
             sdio_err("add aggr pkts failed!\n");
@@ -1041,7 +1039,7 @@ static void aicwf_sdio_enq_rxpkt(struct aic_sdio_dev *sdiodev, struct sk_buff *p
 void aicwf_sdio_hal_irqhandler(struct sdio_func *func)
 {
     struct aicwf_bus *bus_if = dev_get_drvdata(&func->dev);
-    struct aic_sdio_dev *sdiodev = bus_if->bus_priv.sdio;
+    struct aic_sdio_dev *sdiodev;
     u8 intstatus = 0;
     u8 byte_len = 0;
     struct sk_buff *pkt = NULL;
@@ -1051,6 +1049,8 @@ void aicwf_sdio_hal_irqhandler(struct sdio_func *func)
         sdio_err("bus err\n");
         return;
     }
+
+    sdiodev = bus_if->bus_priv.sdio;
 
     ret = aicwf_sdio_readb(sdiodev, SDIOWIFI_BLOCK_CNT_REG, &intstatus);
     while(ret || (intstatus & SDIO_OTHER_INTERRUPT)) {
