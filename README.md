@@ -89,6 +89,6 @@ For Rockchip / Allwinner / Amlogic, set the platform variables in
 ## Build for another kernel without rebooting
 
 ```bash
-sudo dkms build -m aic8800dc -v 6.4.3.0-patched.10 -k <other-version>
+sudo dkms build -m aic8800dc -v 6.4.3.0-patched.11 -k <other-version>
 dkms status
 ```
