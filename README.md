@@ -50,14 +50,15 @@ sudo ./uninstall.sh
 ## Troubleshooting
 
 **Driver loads but no `wlan0` appears.** The dongle is probably stuck in
-USB mass-storage mode (VID:PID `a69c:5721`). The udev rule in
-`tools/aic.rules` runs `eject` to flip it into Wi-Fi mode; if `eject`
-isn't installed or the dongle enumerates as a CD-ROM (`sr0` instead of
-`sd*`), nothing happens. Manual fix:
+USB mass-storage mode. AIC's own sticks show up as `a69c:5721`,
+`a69c:5722` or `a69c:572a` until they are ejected; `lsusb` tells you
+which. The udev rule in `tools/aic.rules` runs `eject` to flip them into
+Wi-Fi mode; if `eject` isn't installed or the dongle enumerates as a
+CD-ROM (`sr0` instead of `sd*`), nothing happens. Manual fix:
 
 ```bash
 sudo apt install usb-modeswitch
-sudo usb_modeswitch -v a69c -p 5721 -KQ
+sudo usb_modeswitch -v a69c -p 5721 -KQ   # use the PID lsusb showed
 # wait a few seconds, then:
 ip link show
 dmesg | tail -30
