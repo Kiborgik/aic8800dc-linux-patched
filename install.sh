@@ -23,7 +23,7 @@ fi
 
 # Check dependencies. `eject` is needed by tools/aic.rules to flip dongles
 # out of USB mass-storage mode on first plug; without it the device stays
-# at VID:PID a69c:5721 and the Wi-Fi PID never appears.
+# at VID:PID a69c:5721, a69c:5722 or a69c:572a and the Wi-Fi PID never appears.
 for cmd in dkms make depmod eject; do
     if ! command -v "$cmd" &>/dev/null; then
         echo "Error: '$cmd' is not installed." >&2
@@ -58,9 +58,12 @@ cp "${SCRIPT_DIR}/tools/aic.rules" /etc/udev/rules.d/
 # other way round fires the trigger with stale rules.
 udevadm control --reload
 udevadm trigger
-if [ -L /dev/aicudisk ]; then
-    eject /dev/aicudisk || true
-fi
+# trigger only queues the events; without settle the symlink is not there yet
+udevadm settle || true
+for node in /dev/aicudisk*; do
+    [ -e "$node" ] || continue
+    eject "$node" || true
+done
 
 # --- Prepare DKMS source tree ---
 # Remove every previously registered version (not just the same version)
