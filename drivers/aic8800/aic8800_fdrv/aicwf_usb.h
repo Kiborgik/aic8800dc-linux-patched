@@ -28,6 +28,7 @@
 #define USB_PRODUCT_ID_AIC8801				0x8801
 #define USB_PRODUCT_ID_AIC8800DC			0x88dc
 #define USB_PRODUCT_ID_AIC8800DW            0x88dd
+#define USB_PRODUCT_ID_AIC8800FC_U2         0x88de
 #define USB_PRODUCT_ID_AIC8800FC            0x88df
 #define USB_PRODUCT_ID_TENDA                0x0013
 #define USB_PRODUCT_ID_TENDA_U2             0x0014
