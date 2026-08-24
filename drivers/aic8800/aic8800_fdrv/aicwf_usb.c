@@ -1782,22 +1782,15 @@ static int aicwf_parse_usb(struct aic_usb_dev *usb_dev, struct usb_interface *in
 #else
     if (usb->actconfig->desc.bNumInterfaces != 1) {
 #endif
-		/* The MA14N has no Bluetooth, so it shows one interface where a
-		   BT build expects three. Normal for this stick, and the DC
-		   chipid from its VID/PID has to survive. */
-		if (le16_to_cpu(usb->descriptor.idVendor) == USB_VENDOR_ID_MERCUSYS &&
-		    le16_to_cpu(usb->descriptor.idProduct) == USB_PRODUCT_ID_MERCUSYS) {
-			AICWFDBG(LOGINFO, "Mercusys MA14N: single interface, keeping AIC8800DC\n");
-		} else {
-			AICWFDBG(LOGERROR, "Number of interfaces: %d not supported\n",
-				usb->actconfig->desc.bNumInterfaces);
-			if(usb_dev->chipid == PRODUCT_ID_AIC8800DC){
-				AICWFDBG(LOGERROR, "AIC8800DC change to AIC8800DW\n");
-				usb_dev->chipid = PRODUCT_ID_AIC8800DW;
-			}else if (usb_dev->chipid == PRODUCT_ID_AIC8800DW) {
-				AICWFDBG(LOGERROR, "AIC8800DW\n");
-			}
-		}
+		/* WiFi-only sticks (no onboard Bluetooth) enumerate with a single
+		   vendor interface even on a CONFIG_USB_BT build, which normally
+		   expects three (WiFi + BT ACL + BT SCO). chipid is decided by
+		   aicwf_usb_chipmatch()'s VID/PID match, and firmware/calibration
+		   filenames are picked straight off the USB descriptor elsewhere
+		   in this driver, so interface count past this point doesn't
+		   gate anything and isn't evidence of DC vs DW either way. */
+		AICWFDBG(LOGINFO, "Number of interfaces: %d\n",
+			usb->actconfig->desc.bNumInterfaces);
     }
 
     if ((interface_desc->bInterfaceClass != USB_CLASS_VENDOR_SPEC) ||
@@ -1962,15 +1955,18 @@ static int aicwf_usb_chipmatch(struct aic_usb_dev *usb_dev, u16_l vid, u16_l pid
 	}else if(pid == USB_PRODUCT_ID_AIC8800DC ||
         (vid == USB_VENDOR_ID_TENDA && pid == USB_PRODUCT_ID_TENDA)
         /* MA14N reports itself as AIC8800DC; it sat in the DW branch below */
-        || (vid == USB_VENDOR_ID_MERCUSYS && pid == USB_PRODUCT_ID_MERCUSYS)){
+        || (vid == USB_VENDOR_ID_MERCUSYS && pid == USB_PRODUCT_ID_MERCUSYS)
+        /* TP-Link AX300 (Archer TX1U Nano): `lsusb -v -d 3625:0110` shows
+           iProduct "AIC8800DC" on the device itself, same signal used for
+           MA14N above; it sat in the DW branch below */
+        || (vid == USB_VENDOR_ID_TP2 && pid == USB_PRODUCT_ID_TP2)){
 		usb_dev->chipid = PRODUCT_ID_AIC8800DC;
 		AICWFDBG(LOGINFO, "%s USE AIC8800DC\r\n", __func__);
 		return 0;
 	}else if(pid == USB_PRODUCT_ID_AIC8800DW
 	 || pid == USB_PRODUCT_ID_AIC8800FC_U2
 	 || pid == USB_PRODUCT_ID_AIC8800FC ||
-        (vid == USB_VENDOR_ID_TP && pid == USB_PRODUCT_ID_TP)
-        || (vid == USB_VENDOR_ID_TP2 && pid == USB_PRODUCT_ID_TP2)){
+        (vid == USB_VENDOR_ID_TP && pid == USB_PRODUCT_ID_TP)){
         usb_dev->chipid = PRODUCT_ID_AIC8800DW;
 		AICWFDBG(LOGINFO, "%s USE AIC8800DW\r\n", __func__);
         return 0;
