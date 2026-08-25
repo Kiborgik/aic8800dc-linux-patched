@@ -1782,13 +1782,6 @@ static int aicwf_parse_usb(struct aic_usb_dev *usb_dev, struct usb_interface *in
 #else
     if (usb->actconfig->desc.bNumInterfaces != 1) {
 #endif
-		/* WiFi-only sticks (no onboard Bluetooth) enumerate with a single
-		   vendor interface even on a CONFIG_USB_BT build, which normally
-		   expects three (WiFi + BT ACL + BT SCO). chipid is decided by
-		   aicwf_usb_chipmatch()'s VID/PID match, and firmware/calibration
-		   filenames are picked straight off the USB descriptor elsewhere
-		   in this driver, so interface count past this point doesn't
-		   gate anything and isn't evidence of DC vs DW either way. */
 		AICWFDBG(LOGINFO, "Number of interfaces: %d\n",
 			usb->actconfig->desc.bNumInterfaces);
     }
@@ -1956,9 +1949,6 @@ static int aicwf_usb_chipmatch(struct aic_usb_dev *usb_dev, u16_l vid, u16_l pid
         (vid == USB_VENDOR_ID_TENDA && pid == USB_PRODUCT_ID_TENDA)
         /* MA14N reports itself as AIC8800DC; it sat in the DW branch below */
         || (vid == USB_VENDOR_ID_MERCUSYS && pid == USB_PRODUCT_ID_MERCUSYS)
-        /* TP-Link AX300 (Archer TX1U Nano): `lsusb -v -d 3625:0110` shows
-           iProduct "AIC8800DC" on the device itself, same signal used for
-           MA14N above; it sat in the DW branch below */
         || (vid == USB_VENDOR_ID_TP2 && pid == USB_PRODUCT_ID_TP2)){
 		usb_dev->chipid = PRODUCT_ID_AIC8800DC;
 		AICWFDBG(LOGINFO, "%s USE AIC8800DC\r\n", __func__);
