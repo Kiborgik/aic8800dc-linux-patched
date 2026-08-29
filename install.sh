@@ -6,7 +6,7 @@
 set -eu
 
 PACKAGE_NAME="aic8800dc"
-PACKAGE_VERSION="6.4.3.0-patched.12"
+PACKAGE_VERSION="6.4.3.0-patched.13"
 SRC_DIR="/usr/src/${PACKAGE_NAME}-${PACKAGE_VERSION}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 

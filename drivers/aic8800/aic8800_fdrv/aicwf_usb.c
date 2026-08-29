@@ -1947,6 +1947,7 @@ static int aicwf_usb_chipmatch(struct aic_usb_dev *usb_dev, u16_l vid, u16_l pid
 		return 0;
 	}else if(pid == USB_PRODUCT_ID_AIC8800DC ||
         (vid == USB_VENDOR_ID_TENDA && pid == USB_PRODUCT_ID_TENDA)
+        || (vid == USB_VENDOR_ID_TENDA && pid == USB_PRODUCT_ID_TENDA_U2)
         /* MA14N reports itself as AIC8800DC; it sat in the DW branch below */
         || (vid == USB_VENDOR_ID_MERCUSYS && pid == USB_PRODUCT_ID_MERCUSYS)
         || (vid == USB_VENDOR_ID_TP2 && pid == USB_PRODUCT_ID_TP2)){
@@ -2193,9 +2194,7 @@ static struct usb_device_id aicwf_usb_id_table[] = {
     {USB_DEVICE(USB_VENDOR_ID_AIC_V2, USB_PRODUCT_ID_AIC8800FC_U2)},
     {USB_DEVICE(USB_VENDOR_ID_AIC_V2, USB_PRODUCT_ID_AIC8800FC)},
     {USB_DEVICE(USB_VENDOR_ID_TENDA, USB_PRODUCT_ID_TENDA)},
-    /* Tenda U2 (2604:0014) is untested: it has no entry in aicwf_usb_chipmatch()
-       and no RF calibration file, so binding it would only fail probe. */
-    //{USB_DEVICE(USB_VENDOR_ID_TENDA, USB_PRODUCT_ID_TENDA_U2)},
+    {USB_DEVICE(USB_VENDOR_ID_TENDA, USB_PRODUCT_ID_TENDA_U2)},
     {USB_DEVICE(USB_VENDOR_ID_TP, USB_PRODUCT_ID_TP)},
     {USB_DEVICE(USB_VENDOR_ID_TP2, USB_PRODUCT_ID_TP2)},
     {USB_DEVICE(USB_VENDOR_ID_MERCUSYS, USB_PRODUCT_ID_MERCUSYS)},
