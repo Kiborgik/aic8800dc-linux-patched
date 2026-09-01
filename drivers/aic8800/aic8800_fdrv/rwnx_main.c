@@ -3533,6 +3533,26 @@ static int rwnx_cfg80211_add_key(struct wiphy *wiphy,
 
     if (mac_addr) {
         sta = rwnx_get_sta(rwnx_hw, mac_addr);
+        /*
+         * Fast re-association race: after the AP sends a deauth the 4-way
+         * handshake restarts as soon as the firmware's CONNECT_IND arrives,
+         * but the station is only inserted into sta_table by that same
+         * report.  On USB the EAPOL goes over the data endpoint while
+         * CONNECT_IND comes on the message endpoint, so the two are handled
+         * by different BH/RX threads and wpa_supplicant can install the PTK
+         * a moment before the station entry exists.  A hard -EINVAL there
+         * makes wpa_supplicant report a wrong PSK even though the password
+         * is correct.  In STA / P2P_CLIENT mode wait a little for the
+         * connect report to land (bounded, happy path sleeps zero).
+         */
+        if (!sta &&
+            (vif->wdev.iftype == NL80211_IFTYPE_STATION ||
+             vif->wdev.iftype == NL80211_IFTYPE_P2P_CLIENT)) {
+            for (i = 0; !sta && i < 10; i++) {
+                msleep(10);
+                sta = rwnx_get_sta(rwnx_hw, mac_addr);
+            }
+        }
         if (!sta)
             return -EINVAL;
         rwnx_key = &sta->key;
