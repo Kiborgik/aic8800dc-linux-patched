@@ -2034,6 +2034,7 @@ static int aicwf_usb_probe(struct usb_interface *intf, const struct usb_device_i
     tx_priv = aicwf_tx_init(usb_dev);
     if(!tx_priv) {
         usb_err("tx init fail\n");
+        ret = -ENOMEM;
         goto out_free_bus;
     }
     usb_dev->tx_priv = tx_priv;
