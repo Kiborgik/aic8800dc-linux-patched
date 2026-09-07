@@ -11,6 +11,36 @@ Out-of-tree Linux driver for the AIC8800DC USB Wi-Fi chipset, based on
 upstream 6.4.3.0 with compatibility fixes. DKMS-aware: rebuilds itself
 on every kernel update.
 
+## Supported devices
+
+| USB ID | Device | Chip | Calibration |
+| --- | --- | --- | --- |
+| `a69c:88dc` | AIC reference | 8800DC | generic |
+| `a69c:88dd` | AIC reference | 8800DW | generic |
+| `a69c:88de` | UGREEN AIC-AX300 | 8800DW | generic |
+| `368b:88de` | UGREEN AIC-AX300 | 8800DW | generic |
+| `368b:88df` | AIC reference | 8800DW | generic |
+| `2357:0147` | TP-Link Archer TX1U Nano | 8800DW | `_2357` |
+| `2604:0013` | Tenda W311MI v6.0 | 8800DC | `_2604` |
+| `2604:0014` | Tenda U2 | 8800DC | generic |
+| `2c4e:0114` | Mercusys MA14N | 8800DC | `_2c4e` |
+| `3625:0110` | TP-Link AX300 | 8800DC | `_3625` |
+
+Most of these ship in USB mass-storage mode and show up as `a69c:5721`,
+`a69c:5722` or `a69c:572a` until the udev rule ejects them, so check
+`lsusb` after plugging in rather than before.
+
+Calibration is the per-device TX power table in
+`fw/aic8800DC/aic_userconfig_8800dc_<vid>.txt`. Sticks marked generic
+fall back to AIC's reference values instead of the OEM's.
+
+`a69c:8801` is in the driver's device table, inherited from upstream.
+This package ships 8800DC firmware only, so an 8801 has nothing to load.
+
+Adding a rebranded stick takes three matching driver entries, not a
+config change. Open an issue with the `lsusb` ID instead of patching the
+device table by hand.
+
 ## Install
 
 ```bash
