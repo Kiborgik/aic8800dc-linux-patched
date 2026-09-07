@@ -3,11 +3,15 @@
 PACKAGE_NAME="aic8800dc"
 PACKAGE_VERSION="6.4.3.0-patched.14"
 KVER="$(uname -r)"
+ARCH="$(uname -m)"
+DKMS_MOD_DIR="/var/lib/dkms/${PACKAGE_NAME}/${PACKAGE_VERSION}/${KVER}/${ARCH}/module"
 PASS=0
 FAIL=0
+WARN=0
 
 ok()   { echo "  [OK]   $1"; PASS=$((PASS+1)); }
 fail() { echo "  [FAIL] $1"; FAIL=$((FAIL+1)); }
+warn() { echo "  [WARN] $1"; WARN=$((WARN+1)); }
 info() { echo "  [INFO] $1"; }
 
 echo "##################################################"
@@ -29,6 +33,12 @@ if command -v dkms &>/dev/null; then
     else
         fail "DKMS has no record of ${PACKAGE_NAME}/${PACKAGE_VERSION}. Run: sudo ./install.sh"
     fi
+    OTHERS="$(dkms status 2>/dev/null \
+              | sed -n -e 's@^\([^,/ ]*\)[,/].*@\1@p' \
+              | sort -u | grep '^aic' | grep -vx "${PACKAGE_NAME}")"
+    for pkg in ${OTHERS}; do
+        info "another AIC DKMS package is registered: ${pkg}"
+    done
 else
     fail "dkms command not found. Install dkms package first"
 fi
@@ -37,15 +47,19 @@ echo ""
 # --- 2. Module files on disk ---
 echo "-- Installed .ko files --"
 for mod in aic_load_fw aic8800_fdrv; do
-    KO_PATH="$(find /lib/modules/${KVER} \
+    KO_PATHS="$(find /lib/modules/${KVER} \( \
                 -name "${mod}.ko"     -o \
                 -name "${mod}.ko.xz"  -o \
                 -name "${mod}.ko.zst" -o \
-                -name "${mod}.ko.gz"  2>/dev/null | head -1)"
-    if [ -n "${KO_PATH}" ]; then
-        ok "${KO_PATH}"
-    else
+                -name "${mod}.ko.gz"  \) -print 2>/dev/null)"
+    KO_COUNT="$(printf '%s\n' "${KO_PATHS}" | grep -c .)"
+    if [ "${KO_COUNT}" -eq 1 ]; then
+        ok "${KO_PATHS}"
+    elif [ "${KO_COUNT}" -eq 0 ]; then
         fail "${mod}.ko not found under /lib/modules/${KVER}"
+    else
+        warn "${KO_COUNT} copies of ${mod}, depmod picks one and can flip on a kernel upgrade"
+        printf '%s\n' "${KO_PATHS}" | sed 's/^/         /'
     fi
 done
 echo ""
@@ -56,6 +70,17 @@ for mod in aic_load_fw aic8800_fdrv; do
     if modinfo "${mod}" &>/dev/null; then
         VER="$(modinfo -F version "${mod}" 2>/dev/null || echo "n/a")"
         ok "${mod} (version: ${VER})"
+        BUILT="$(ls ${DKMS_MOD_DIR}/${mod}.ko* 2>/dev/null | head -1)"
+        if [ -z "${BUILT}" ]; then
+            info "${mod}: no DKMS build for ${KVER} to compare against"
+        else
+            OURS="$(modinfo -F srcversion "${BUILT}" 2>/dev/null)"
+            LIVE="$(modinfo -F srcversion "${mod}" 2>/dev/null)"
+            if [ -n "${OURS}" ] && [ -n "${LIVE}" ] && [ "${OURS}" != "${LIVE}" ]; then
+                fail "${mod} resolves to a build that is not ours (${LIVE}, ours is ${OURS})"
+                info "$(modinfo -F filename "${mod}" 2>/dev/null)"
+            fi
+        fi
     else
         fail "modinfo ${mod} failed. Module may not be installed"
     fi
@@ -124,9 +149,11 @@ echo ""
 
 # --- Summary ---
 echo "##################################################"
-echo "Result: ${PASS} passed, ${FAIL} failed"
-if [ "${FAIL}" -eq 0 ]; then
+echo "Result: ${PASS} passed, ${FAIL} failed, ${WARN} warnings"
+if [ "${FAIL}" -eq 0 ] && [ "${WARN}" -eq 0 ]; then
     echo "Everything looks good!"
+elif [ "${FAIL}" -eq 0 ]; then
+    echo "No failures, but read the warnings above."
 else
     echo "Fix the failures above, then re-run: sudo ./test.sh"
 fi
