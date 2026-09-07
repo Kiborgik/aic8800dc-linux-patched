@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PACKAGE_NAME="aic8800dc"
-PACKAGE_VERSION="6.4.3.0-patched.14"
+PACKAGE_VERSION="6.4.3.0-patched.15"
 KVER="$(uname -r)"
 ARCH="$(uname -m)"
 DKMS_MOD_DIR="/var/lib/dkms/${PACKAGE_NAME}/${PACKAGE_VERSION}/${KVER}/${ARCH}/module"
