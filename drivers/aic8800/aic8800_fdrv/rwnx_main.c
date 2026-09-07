@@ -4750,7 +4750,7 @@ cfg80211_chandef_identical(const struct cfg80211_chan_def *chandef1,
 #endif
 
 static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
+#if defined(AIC_SET_MONITOR_CHANNEL_NETDEV) || LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
 					     struct net_device *,
 #endif
                                              struct cfg80211_chan_def *chandef)
@@ -5245,7 +5245,7 @@ static int rwnx_cfg80211_get_channel(struct wiphy *wiphy,
     if (rwnx_vif->vif_index == rwnx_hw->monitor_vif)
     {
         //retrieve channel from firmware
-#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
+#if defined(AIC_SET_MONITOR_CHANNEL_NETDEV) || LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
         rwnx_cfg80211_set_monitor_channel(wiphy, NULL, NULL);
 #else
         rwnx_cfg80211_set_monitor_channel(wiphy, NULL);

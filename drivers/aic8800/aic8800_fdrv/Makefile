@@ -294,6 +294,13 @@ ccflags-$(CONFIG_PREALLOC_RX_SKB) += -DCONFIG_PREALLOC_RX_SKB
 ccflags-$(CONFIG_PREALLOC_TXQ) += -DCONFIG_PREALLOC_TXQ
 ccflags-$(CONFIG_USE_WIRELESS_EXT) += -DCONFIG_USE_WIRELESS_EXT
 
+CFG80211_HDR := $(srctree)/include/net/cfg80211.h
+ifneq ($(wildcard $(CFG80211_HDR)),)
+ifneq ($(shell grep -A1 '(\*set_monitor_channel)' $(CFG80211_HDR) | grep -c 'struct net_device'),0)
+ccflags-y += -DAIC_SET_MONITOR_CHANNEL_NETDEV
+endif
+endif
+
 # Platform support list
 CONFIG_PLATFORM_ROCKCHIP ?= n
 CONFIG_PLATFORM_ALLWINNER ?= n
