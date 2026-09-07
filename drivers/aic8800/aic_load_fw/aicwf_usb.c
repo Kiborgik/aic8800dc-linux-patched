@@ -1384,7 +1384,7 @@ static int aicwf_usb_probe(struct usb_interface *intf, const struct usb_device_i
 	}
 
     if (system_config(usb_dev)) {
-        goto out_free_bus;
+        goto out_setup_err;
     }
 #ifdef CONFIG_M2D_OTA_AUTO_SUPPORT
 	if(testmode == FW_M2D_OTA_MODE){
@@ -1395,24 +1395,24 @@ static int aicwf_usb_probe(struct usb_interface *intf, const struct usb_device_i
 #endif
     if(testmode == FW_TEST_MODE){
         if (rwnx_plat_bin_fw_upload_android(usb_dev, RAM_FW_ADDR, FW_RF_BASE_NAME)) {
-            goto out_free_bus;
+            goto out_setup_err;
         }
 
         if (chip_id == CHIP_REV_U03) {
             if(rwnx_plat_bin_fw_upload_android(usb_dev, FW_RAM_ADID_BASE_ADDR, FW_ADID_BASE_NAME_U03)) {
-                goto out_free_bus;
+                goto out_setup_err;
             }
 
             if(rwnx_plat_bin_fw_upload_android(usb_dev, FW_RAM_PATCH_BASE_ADDR_U03, FW_PATCH_BASE_NAME_U03)) {
-                goto out_free_bus;
+                goto out_setup_err;
             }
         } else {
             if(rwnx_plat_bin_fw_upload_android(usb_dev, FW_RAM_ADID_BASE_ADDR, FW_ADID_BASE_NAME)) {
-                goto out_free_bus;
+                goto out_setup_err;
             }
 
             if(rwnx_plat_bin_fw_upload_android(usb_dev, FW_RAM_PATCH_BASE_ADDR, FW_PATCH_BASE_NAME)) {
-                goto out_free_bus;
+                goto out_setup_err;
             }
         }
 
@@ -1454,38 +1454,38 @@ static int aicwf_usb_probe(struct usb_interface *intf, const struct usb_device_i
 	}  else {
 #if defined(CONFIG_PLATFORM_UBUNTU)
         if (rwnx_plat_bin_fw_upload_android(usb_dev, RAM_FW_ADDR, FW_BASE_NAME_PC)) {
-            goto out_free_bus;
+            goto out_setup_err;
         }
 #else
         if (rwnx_plat_bin_fw_upload_android(usb_dev, RAM_FW_ADDR, FW_BASE_NAME)) {
-            goto out_free_bus;
+            goto out_setup_err;
         }
 #endif
         if (chip_id == CHIP_REV_U03) {
             if(rwnx_plat_bin_fw_upload_android(usb_dev, FW_RAM_ADID_BASE_ADDR, FW_ADID_BASE_NAME_U03)) {
-                goto out_free_bus;
+                goto out_setup_err;
             }
 
             if(rwnx_plat_bin_fw_upload_android(usb_dev, FW_RAM_PATCH_BASE_ADDR_U03, FW_PATCH_BASE_NAME_U03)) {
-                goto out_free_bus;
+                goto out_setup_err;
             }
         } else {
             if(rwnx_plat_bin_fw_upload_android(usb_dev, FW_RAM_ADID_BASE_ADDR, FW_ADID_BASE_NAME)) {
-                goto out_free_bus;
+                goto out_setup_err;
             }
 
             if(rwnx_plat_bin_fw_upload_android(usb_dev, FW_RAM_PATCH_BASE_ADDR, FW_PATCH_BASE_NAME)) {
-                goto out_free_bus;
+                goto out_setup_err;
             }
         }
     }
     if (chip_id == CHIP_REV_U03) {
         if (rwnx_plat_bin_fw_patch_table_upload_android(usb_dev, FW_PATCH_TABLE_NAME_U03)) {
-            goto out_free_bus;
+            goto out_setup_err;
         }
     } else {
         if (rwnx_plat_bin_fw_patch_table_upload_android(usb_dev, FW_PATCH_TABLE_NAME)) {
-            goto out_free_bus;
+            goto out_setup_err;
         }
     }
 
@@ -1498,25 +1498,27 @@ static int aicwf_usb_probe(struct usb_interface *intf, const struct usb_device_i
 #endif
 
     if (rwnx_plat_userconfig_upload_android(FW_USERCONFIG_NAME)){
-        goto out_free_bus;
+        goto out_setup_err;
     }
 
     if (patch_config(usb_dev)) {
-        goto out_free_bus;
+        goto out_setup_err;
     }
 
 	if (rf_config(usb_dev)){
-		goto out_free_bus;
+		goto out_setup_err;
 	}
 
     if ((ret = rwnx_send_dbg_start_app_req(usb_dev, fw_addr, HOST_START_APP_AUTO))) {
-        return -1;
+        goto out_setup_err;
     }
     usb_dev->app_cmp = true;
 	fw_loaded = 1;
 
     return 0;
 
+out_setup_err:
+    ret = -EIO;
 out_free_bus:
     aicwf_bus_deinit(dev);
     kfree(bus_if);
