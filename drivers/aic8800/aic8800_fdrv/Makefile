@@ -299,6 +299,18 @@ ifneq ($(wildcard $(CFG80211_HDR)),)
 ifneq ($(shell grep -A1 '(\*set_monitor_channel)' $(CFG80211_HDR) | grep -c 'struct net_device'),0)
 ccflags-y += -DAIC_SET_MONITOR_CHANNEL_NETDEV
 endif
+ifneq ($(shell grep -c '(\*probe_peer)' $(CFG80211_HDR)),0)
+ccflags-y += -DAIC_CFG80211_PROBE_PEER
+endif
+ifneq ($(shell grep -A2 '(\*mgmt_tx)' $(CFG80211_HDR) | grep -c 'u64 cookie)'),0)
+ccflags-y += -DAIC_CFG80211_COOKIE_INPUT
+endif
+ifneq ($(shell grep -A1 'void cfg80211_probe_status' $(CFG80211_HDR) | grep -c 'int link_id'),0)
+ccflags-y += -DAIC_CFG80211_PROBE_STATUS_LINK_ID
+endif
+ifneq ($(shell grep -A4 '(\*remain_on_channel)' $(CFG80211_HDR) | grep -c 'rx_addr'),0)
+ccflags-y += -DAIC_CFG80211_ROC_RX_ADDR
+endif
 endif
 
 # Platform support list
