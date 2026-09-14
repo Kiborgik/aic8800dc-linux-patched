@@ -302,7 +302,7 @@ endif
 ifneq ($(shell grep -c '(\*probe_peer)' $(CFG80211_HDR)),0)
 ccflags-y += -DAIC_CFG80211_PROBE_PEER
 endif
-ifneq ($(shell grep -A2 '(\*mgmt_tx)' $(CFG80211_HDR) | grep -c 'u64 cookie)'),0)
+ifneq ($(shell grep -A2 '(\*mgmt_tx)' $(CFG80211_HDR) | grep -c 'u64 cookie'),0)
 ccflags-y += -DAIC_CFG80211_COOKIE_INPUT
 endif
 ifneq ($(shell grep -A1 'void cfg80211_probe_status' $(CFG80211_HDR) | grep -c 'int link_id'),0)
