@@ -772,13 +772,19 @@ rwnx_tdls_send_mgmt_packet_data(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_v
                       initiator, extra_ies, extra_ies_len, oper_class, chandef);
 
     if (action_code == WLAN_PUB_ACTION_TDLS_DISCOVER_RES) {
+        #if !defined(AIC_CFG80211_COOKIE_INPUT) && LINUX_VERSION_CODE < KERNEL_VERSION(7, 3, 0)
         u64 cookie;
+        #endif
         #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
         struct cfg80211_mgmt_tx_params params;
 
         params.len = skb->len;
         params.buf = skb->data;
+        #if defined(AIC_CFG80211_COOKIE_INPUT) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+        ret = rwnx_start_mgmt_xmit(rwnx_vif, NULL, &params, false, 0);
+        #else
         ret = rwnx_start_mgmt_xmit(rwnx_vif, NULL, &params, false, &cookie);
+        #endif
         #else
         ret = rwnx_start_mgmt_xmit(rwnx_vif, NULL, NULL, false, 0, skb->data, skb->len, false, false, &cookie);
         #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */

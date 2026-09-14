@@ -1332,6 +1332,7 @@ netdev_tx_t rwnx_start_xmit(struct sk_buff *skb, struct net_device *dev)
     sw_txhdr->rwnx_sta  = sta;
     sw_txhdr->rwnx_vif  = rwnx_vif;
     sw_txhdr->skb       = skb;
+    sw_txhdr->cookie    = (unsigned long)skb;
     sw_txhdr->headroom  = headroom;
     sw_txhdr->map_len   = skb->len - offsetof(struct rwnx_txhdr, hw_hdr);
 
@@ -1425,9 +1426,15 @@ free:
 
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+#if defined(AIC_CFG80211_COOKIE_INPUT) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
+                         struct cfg80211_mgmt_tx_params *params, bool offchan,
+                         u64 cookie)
+#else
 int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
                          struct cfg80211_mgmt_tx_params *params, bool offchan,
                          u64 *cookie)
+#endif
 #else
 int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
                          struct ieee80211_channel *channel, bool offchan,
@@ -1451,6 +1458,7 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
     int nx_off_chan_txq_idx = NX_OFF_CHAN_TXQ_IDX;
     struct rwnx_txq *txq;
     bool robust;
+    u64 mgmt_cookie;
     #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
     const u8 *buf = params->buf;
     size_t len = params->len;
@@ -1492,7 +1500,12 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
         return -ENOMEM;
     }
 
-    *cookie = (unsigned long)skb;
+#if defined(AIC_CFG80211_COOKIE_INPUT) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+    mgmt_cookie = cookie;
+#else
+    mgmt_cookie = (unsigned long)skb;
+    *cookie = mgmt_cookie;
+#endif
 
     /*
      * Move skb->data pointer in order to reserve room for rwnx_txhdr
@@ -1562,6 +1575,7 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
     sw_txhdr->rwnx_sta = sta;
     sw_txhdr->rwnx_vif = vif;
     sw_txhdr->skb = skb;
+    sw_txhdr->cookie = mgmt_cookie;
     sw_txhdr->headroom = headroom;
     sw_txhdr->map_len = skb->len - offsetof(struct rwnx_txhdr, hw_hdr);
 #ifdef CONFIG_RWNX_AMSDUS_TX
@@ -1918,6 +1932,7 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
     sw_txhdr->rwnx_sta = sta;
     sw_txhdr->rwnx_vif = vif;
     sw_txhdr->skb = skb_mgmt;
+    sw_txhdr->cookie = (unsigned long)skb_mgmt;
     sw_txhdr->headroom = headroom;
     sw_txhdr->map_len = skb_mgmt->len - offsetof(struct rwnx_txhdr, hw_hdr);
     sw_txhdr->raw_frame = 1;
@@ -2027,7 +2042,7 @@ int rwnx_txdatacfm(void *pthis, void *host_id)
 #endif
         /* Confirm transmission to CFG80211 */
         cfg80211_mgmt_tx_status(&sw_txhdr->rwnx_vif->wdev,
-                                (unsigned long)skb,
+                                sw_txhdr->cookie,
                                 (skb->data + sw_txhdr->headroom),
                                 sw_txhdr->frame_len,
                                 rwnx_txst.acknowledged,
