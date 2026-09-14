@@ -33,5 +33,8 @@ jobs:
             cp -a /src/. "/usr/src/$PACKAGE_NAME-$PACKAGE_VERSION/"
             dkms add   -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION"
             dkms build -m "$PACKAGE_NAME" -v "$PACKAGE_VERSION" -k "$kver" \
-              --kernelsourcedir "/usr/src/kernels/$kver"
+              --kernelsourcedir "/usr/src/kernels/$kver" || {
+                cat "/var/lib/dkms/$PACKAGE_NAME/$PACKAGE_VERSION/build/make.log"
+                exit 1
+              }
           '
