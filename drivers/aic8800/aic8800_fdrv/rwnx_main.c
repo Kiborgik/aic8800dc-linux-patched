@@ -5432,7 +5432,7 @@ static int rwnx_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 #if defined(AIC_CFG80211_COOKIE_INPUT) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
         error = rwnx_cfg80211_remain_on_channel(wiphy, wdev, channel,
                                                 30, 0, NULL);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0))
+#elif defined(AIC_CFG80211_ROC_RX_ADDR) || (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0))
         error = rwnx_cfg80211_remain_on_channel(wiphy, wdev, channel,
                                                 30, &cookie, NULL);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
