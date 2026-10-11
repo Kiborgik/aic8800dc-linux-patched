@@ -12,6 +12,7 @@
 #endif
 #define RWNX_MAC_PATCH_NAME2_8800DC RWNX_MAC_PATCH_BASE_NAME_8800DC".bin"
 #define RWNX_MAC_PATCH_NAME2_8800DC_U02 RWNX_MAC_PATCH_BASE_NAME_8800DC"_u02.bin"
+#define RWNX_MAC_PATCH_NAME2_8800DC_H_U02 RWNX_MAC_PATCH_BASE_NAME_8800DC"_h_u02.bin"
 
 #ifdef CONFIG_FOR_IPCAM
 #define RWNX_MAC_PATCH_TABLE_NAME_8800DC "fmacfw_patch_tbl_8800dc_ipc"
@@ -20,6 +21,7 @@
 #endif
 #define RWNX_MAC_PATCH_TABLE_8800DC RWNX_MAC_PATCH_TABLE_NAME_8800DC ".bin"
 #define RWNX_MAC_PATCH_TABLE_8800DC_U02 RWNX_MAC_PATCH_TABLE_NAME_8800DC "_u02.bin"
+#define RWNX_MAC_PATCH_TABLE_8800DC_H_U02 RWNX_MAC_PATCH_TABLE_NAME_8800DC "_h_u02.bin"
 
 
 #define RWNX_MAC_RF_PATCH_BASE_NAME_8800DC     "fmacfw_rf_patch_8800dc"
@@ -61,6 +63,34 @@ static u32 syscfg_tbl_masked_8800dc[][3] = {
     #endif
     //#endif /* CONFIG_PMIC_SETTING */
     {0x00000000, 0x00000000, 0x00000000}, // last one
+};
+
+static u32 syscfg_tbl_masked_8800dc_h[][3] = {
+    {0x7000216C, ((0x3 << 2) | (0x3 << 4)), ((0x2 << 2) | (0x2 << 4))},
+    {0x70002138, (0xFF << 0), (0xFF << 0)},
+    {0x7000213C, (0xFF << 0), (0xFF << 0)},
+    {0x70002144, (0xFF << 0), (0xFF << 0)},
+    {0x700021BC, (0x3 << 2), (0x1 << 2)},
+    {0x70002118, ((0x7 << 4) | (0x1 << 7)), ((0x2 << 4) | (0x1 << 7))},
+    {0x70002104, ((0x3F << 0) | (0x1 << 6)), ((0x2 << 0) | (0x1 << 6))},
+    {0x7000210C, ((0x3F << 0) | (0x1 << 6)), ((0x2 << 0) | (0x1 << 6))},
+    {0x70002170, (0xF << 0), (0x1 << 0)},
+    {0x70002190, (0x3F << 0), (24 << 0)},
+    {0x700021CC, ((0x7 << 4) | (0x1 << 7)), ((0x0 << 4) | (0x0 << 7))},
+    {0x700010A0, (0x1 << 11), (0x1 << 11)},
+    {0x70001038, (0x1 << 8), (0x1 << 8)},
+    {0x70001084, (0x3 << 13), (0x0 << 13)},
+    {0x70001094, (0x3 << 2), (0x0 << 2)},
+    {0x700021D0, ((0x1 << 5) | (0x1 << 6)), ((0x1 << 5) | (0x1 << 6))},
+    #if defined(CONFIG_VRF_DCDC_MODE)
+    {0x70001000, ((0x1 << 0) | (0x1 << 20) | (0x1 << 22)),
+                 ((0x1 << 0) | (0x1 << 20) | (0x0 << 22))},
+    #else
+    {0x70001000, ((0x1 << 0) | (0x1 << 20) | (0x1 << 22)),
+                 ((0x0 << 0) | (0x1 << 20) | (0x0 << 22))},
+    #endif
+    {0x70001028, (0xf << 2), (0x1 << 2)},
+    {0x00000000, 0x00000000, 0x00000000},
 };
 
 static u32 syscfg_tbl_masked_8800dc_u01[][3] = {
@@ -1495,6 +1525,21 @@ static uint32_t txgain_map[96] =  {
 #endif
 };
 
+static uint32_t txgain_map_h[96] = {
+    0xffd888, 0xffd979, 0xffd988, 0xffda79, 0xffda88, 0xffdb79, 0xffdb88, 0xffdc72,
+    0xffdc80, 0xffdd80, 0xffde66, 0xffde72, 0xffde80, 0xffdf79, 0xffdf88, 0xffdf98,
+    0xffd079, 0xffd088, 0xffd179, 0xffd188, 0xffd288, 0xffd36c, 0xffd379, 0xffd388,
+    0xffd479, 0xffd488, 0xffd579, 0xffd588, 0xffd679, 0xffd688, 0xffd779, 0xffd879,
+    0xffc879, 0xffc96b, 0xffc979, 0xffcc45, 0xffcc4d, 0xffcc56, 0xffcc60, 0xffcc6b,
+    0xffcc79, 0xffcd72, 0xffce60, 0xffce72, 0xffcf72, 0xffcf80, 0xffcf90, 0xffcf90,
+    0xffc079, 0xffc16b, 0xffc179, 0xffc26b, 0xffc279, 0xffc36b, 0xffc379, 0xffc46b,
+    0xffc479, 0xffc56b, 0xffc579, 0xffc66b, 0xffc679, 0xffc76b, 0xffc779, 0xffc86b,
+    0xffc879, 0xffc96b, 0xffc979, 0xffcc45, 0xffcc4d, 0xffcc56, 0xffcc60, 0xffcc6b,
+    0xffcc79, 0xffcd72, 0xffcf5b, 0xffcf66, 0xffcf72, 0xffcf80, 0xffcf90, 0xffcf90,
+    0xffc079, 0xffc16b, 0xffc179, 0xffc26b, 0xffc279, 0xffc36b, 0xffc379, 0xffc46b,
+    0xffc479, 0xffc56b, 0xffc579, 0xffc66b, 0xffc679, 0xffc76b, 0xffc779, 0xffc86b,
+};
+
 static u32 patch_tbl_func[][2] =
 {
     {0x00110054, 0x0018186D}, // same as jump_tbl idx 168
@@ -1578,6 +1623,20 @@ static u32 txgain_table_1[32] =
     0x00004001,
     0x3EF2203F, //index 15
     0x00004001
+};
+
+static u32 txgain_table_h[32] = {
+    0xA55629C9, 0x00005825, 0xAE5629C9, 0x00005825, 0xAD5629CD, 0x00005825, 0xAD5629D1, 0x00005825,
+    0xAD5629D7, 0x00005825, 0xAD5629DE, 0x00005825, 0xAD5629E6, 0x00005825, 0xBD5629E6, 0x00005825,
+    0xBD5629F0, 0x00005825, 0xCD5629F0, 0x00005825, 0xE55629F0, 0x00005825, 0xE55629FF, 0x00005825,
+    0xE55629FF, 0x00002825, 0xE75629FF, 0x00002825, 0xFF5629FF, 0x00001825, 0xFF5628FF, 0x00001025,
+};
+
+static u32 txgain_table_1_h[32] = {
+    0x941A2048, 0x00001825, 0x961A2048, 0x00001825, 0x9D1A2048, 0x00001825, 0x9A1A204F, 0x00001825,
+    0x961A204F, 0x00001825, 0x9A1A2057, 0x00001825, 0x9C1A2057, 0x00001825, 0xA31A205B, 0x00001825,
+    0xAB1A205B, 0x00001825, 0xAD1A205B, 0x00001825, 0xA71A2064, 0x00001825, 0xAD1A2070, 0x00001825,
+    0xAD72207F, 0x00001825, 0xBCAE207F, 0x00001825, 0xBFB2207F, 0x00001825, 0xD73A207F, 0x00001825,
 };
 
 static u32 wifi_rxgain_table_24g_20m_8800dcdw[64] = {
@@ -1883,7 +1942,10 @@ void aicwf_patch_config_8800dc(struct rwnx_hw *rwnx_hw)
         }
 
         #if !defined(CONFIG_FPGA_VERIFICATION)
-        ret = rwnx_send_dbg_mem_block_write_req(rwnx_hw, txgain_cfg_addr, txgain_cfg_size, txgain_map);
+        if (IS_CHIP_ID_H())
+            ret = rwnx_send_dbg_mem_block_write_req(rwnx_hw, txgain_cfg_addr, sizeof(txgain_map_h), txgain_map_h);
+        else
+            ret = rwnx_send_dbg_mem_block_write_req(rwnx_hw, txgain_cfg_addr, txgain_cfg_size, txgain_map);
         if (ret) {
             AICWFDBG(LOGERROR, "txgain upload fail: %x, err:%d\r\n", txgain_cfg_addr, ret);
         }
@@ -1902,7 +1964,8 @@ void aicwf_patch_config_8800dc(struct rwnx_hw *rwnx_hw)
 	        }
 		}
 		else{
-			ret = aicwf_patch_table_load(rwnx_hw, RWNX_MAC_PATCH_TABLE_8800DC_U02);
+			ret = aicwf_patch_table_load(rwnx_hw, chip_sub_id == 2 ?
+				RWNX_MAC_PATCH_TABLE_8800DC_H_U02 : RWNX_MAC_PATCH_TABLE_8800DC_U02);
 			if(ret){
 				printk("patch_tbl upload fail: err:%d\r\n", ret);
 			}
@@ -1942,10 +2005,10 @@ int aicwf_set_rf_config_8800dc(struct rwnx_hw *rwnx_hw, struct mm_set_rf_calib_c
 
 
 	if (testmode == 0) {
-		if ((ret = rwnx_send_rf_config_req(rwnx_hw, 0,	1, (u8_l *)txgain_table, 128)))
+		if ((ret = rwnx_send_rf_config_req(rwnx_hw, 0,	1, (u8_l *)(IS_CHIP_ID_H() ? txgain_table_h : txgain_table), 128)))
 			return -1;
 
-        if ((ret = rwnx_send_rf_config_req(rwnx_hw, 16,	1, (u8_l *)txgain_table_1, 128)))
+        if ((ret = rwnx_send_rf_config_req(rwnx_hw, 16,	1, (u8_l *)(IS_CHIP_ID_H() ? txgain_table_1_h : txgain_table_1), 128)))
 			return -1;
 
 		if ((ret = rwnx_send_rf_config_req(rwnx_hw, 0,	0, (u8_l *)wifi_rxgain_table_24g_20m_8800dcdw, 256)))
@@ -1976,6 +2039,8 @@ int aicwf_plat_patch_load_8800dc(struct rwnx_hw *rwnx_hw){
             ret = rwnx_plat_bin_fw_upload_2(rwnx_hw, ROM_FMAC_PATCH_ADDR, RWNX_MAC_PATCH_NAME2_8800DC);
         } else if (chip_sub_id == 1) {
             ret = rwnx_plat_bin_fw_upload_2(rwnx_hw, ROM_FMAC_PATCH_ADDR, RWNX_MAC_PATCH_NAME2_8800DC_U02);
+        } else if (chip_sub_id == 2) {
+            ret = rwnx_plat_bin_fw_upload_2(rwnx_hw, ROM_FMAC_PATCH_ADDR, RWNX_MAC_PATCH_NAME2_8800DC_H_U02);
         } else {
             printk("unsupported id: %d\n", chip_sub_id);
         }
@@ -2035,6 +2100,7 @@ int	rwnx_plat_userconfig_load_8800dc(struct rwnx_hw *rwnx_hw){
 void system_config_8800dc(struct rwnx_hw *rwnx_hw){
     int syscfg_num;
     int ret, cnt;
+    u32 (*msk_tbl)[3];
     const u32 mem_addr = 0x40500000;
     const u32 cache_mem_addr = 0x40100020;
     struct dbg_mem_read_cfm rd_mem_addr_cfm;
@@ -2093,23 +2159,28 @@ void system_config_8800dc(struct rwnx_hw *rwnx_hw){
         }
     }
 
-	syscfg_num = sizeof(syscfg_tbl_masked_8800dc) / sizeof(u32) / 3;
-
+	if (IS_CHIP_ID_H()) {
+		msk_tbl = syscfg_tbl_masked_8800dc_h;
+		syscfg_num = sizeof(syscfg_tbl_masked_8800dc_h) / sizeof(u32) / 3;
+	} else {
+		msk_tbl = syscfg_tbl_masked_8800dc;
+		syscfg_num = sizeof(syscfg_tbl_masked_8800dc) / sizeof(u32) / 3;
+	}
 
     for (cnt = 0; cnt < syscfg_num; cnt++) {
-	    if (syscfg_tbl_masked_8800dc[cnt][0] == 0x00000000) {
+	    if (msk_tbl[cnt][0] == 0x00000000) {
             break;
-        } else if (syscfg_tbl_masked_8800dc[cnt][0] == 0x70001000) {
+        } else if (msk_tbl[cnt][0] == 0x70001000) {
             if (chip_mcu_id == 0) {
-                syscfg_tbl_masked_8800dc[cnt][1] |= ((0x1 << 8) | (0x1 << 15)); // mask
-                syscfg_tbl_masked_8800dc[cnt][2] |= ((0x1 << 8) | (0x1 << 15));
+                msk_tbl[cnt][1] |= ((0x1 << 8) | (0x1 << 15));
+                msk_tbl[cnt][2] |= ((0x1 << 8) | (0x1 << 15));
             }
         }
 
         ret = rwnx_send_dbg_mem_mask_write_req(rwnx_hw,
-            syscfg_tbl_masked_8800dc[cnt][0], syscfg_tbl_masked_8800dc[cnt][1], syscfg_tbl_masked_8800dc[cnt][2]);
+            msk_tbl[cnt][0], msk_tbl[cnt][1], msk_tbl[cnt][2]);
         if (ret) {
-			AICWFDBG(LOGERROR, "%x mask write fail: %d\n", syscfg_tbl_masked_8800dc[cnt][0], ret);
+			AICWFDBG(LOGERROR, "%x mask write fail: %d\n", msk_tbl[cnt][0], ret);
             return;
         }
     }

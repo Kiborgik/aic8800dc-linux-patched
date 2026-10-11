@@ -20,15 +20,26 @@ on every kernel update.
 | `a69c:88de` | UGREEN AIC-AX300 | 8800DW | generic |
 | `368b:88de` | UGREEN AIC-AX300 | 8800DW | generic |
 | `368b:88df` | AIC reference | 8800DW | generic |
+| `368b:88e0` | Hikvision | 8800DC | generic |
+| `368b:88e1` | Hikvision | 8800DC | generic |
+| `368b:88e2` | H3C Magic | 8800DC | generic |
+| `368b:88e3` | H3C Magic | 8800DC | generic |
+| `368b:88e5` | UGREEN AX300 | 8800DC | generic |
 | `2357:0147` | TP-Link Archer TX1U Nano | 8800DW | `_2357` |
 | `2604:0013` | Tenda W311MI v6.0 | 8800DC | `_2604` |
 | `2604:0014` | Tenda U2 | 8800DC | generic |
 | `2c4e:0114` | Mercusys MA14N | 8800DC | `_2c4e` |
+| `2c4e:0126` | Mercusys | 8800DC | generic |
 | `3625:0110` | TP-Link AX300 | 8800DC | `_3625` |
 
-Most of these ship in USB mass-storage mode and show up as `a69c:5721`,
-`a69c:5722` or `a69c:572a` until the udev rule ejects them, so check
-`lsusb` after plugging in rather than before.
+`368b:88e0`–`88e5` and `2c4e:0126` are untested. Have one? Open an issue.
+
+8800DC rev 2 (`chip_sub_id=2` in dmesg) is experimental. If you have
+one, open an issue with your dmesg.
+
+Most of these ship in USB mass-storage mode (`a69c:5721`–`5727`, `572a`,
+`572c` or `572f`) until the udev rule ejects them, so check `lsusb` after
+plugging in.
 
 Calibration is the per-device TX power table in
 `fw/aic8800DC/aic_userconfig_8800dc_<vid>.txt`. Sticks marked generic
@@ -80,9 +91,8 @@ sudo ./uninstall.sh
 ## Troubleshooting
 
 **Driver loads but no `wlan0` appears.** The dongle is probably stuck in
-USB mass-storage mode. AIC's own sticks show up as `a69c:5721`,
-`a69c:5722` or `a69c:572a` until they are ejected; `lsusb` tells you
-which. The udev rule in `tools/aic.rules` runs `eject` to flip them into
+USB mass-storage mode (`a69c:5721`–`5727`, `572a`, `572c` or `572f`);
+`lsusb` tells you which. The udev rule in `tools/aic.rules` runs `eject` to flip them into
 Wi-Fi mode; if `eject` isn't installed or the dongle enumerates as a
 CD-ROM (`sr0` instead of `sd*`), nothing happens. Manual fix:
 

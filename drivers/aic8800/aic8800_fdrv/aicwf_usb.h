@@ -30,11 +30,17 @@
 #define USB_PRODUCT_ID_AIC8800DW            0x88dd
 #define USB_PRODUCT_ID_AIC8800FC_U2         0x88de
 #define USB_PRODUCT_ID_AIC8800FC            0x88df
+#define USB_PRODUCT_ID_AIC8800FC_CUS2       0x88e0
+#define USB_PRODUCT_ID_AIC8800FC_CUS3       0x88e1
+#define USB_PRODUCT_ID_AIC8800FC_CUS4       0x88e2
+#define USB_PRODUCT_ID_AIC8800FC_CUS5       0x88e3
+#define USB_PRODUCT_ID_AIC8800FC_CUS6       0x88e5
 #define USB_PRODUCT_ID_TENDA                0x0013
 #define USB_PRODUCT_ID_TENDA_U2             0x0014
 #define USB_PRODUCT_ID_TP                   0x0147
 #define USB_PRODUCT_ID_TP2                  0x0110
 #define USB_PRODUCT_ID_MERCUSYS             0x0114
+#define USB_PRODUCT_ID_MERCUSYS2            0x0126
 #endif
 
 enum AICWF_IC{

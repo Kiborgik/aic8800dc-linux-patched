@@ -37,5 +37,8 @@ extern u8 chip_id;
 extern u8 chip_sub_id;
 extern u8 chip_mcu_id;
 
+#define CHIP_ID_H_MASK  0xC0
+#define IS_CHIP_ID_H()  ((chip_id & CHIP_ID_H_MASK) == CHIP_ID_H_MASK)
+
 
 #endif /* _RWNX_MAIN_H_ */
