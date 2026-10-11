@@ -34,6 +34,9 @@ on every kernel update.
 
 `368b:88e0`–`88e5` and `2c4e:0126` are untested. Have one? Open an issue.
 
+8800DC rev 2 (`chip_sub_id=2` in dmesg) is experimental. If you have
+one, open an issue with your dmesg.
+
 Most of these ship in USB mass-storage mode (`a69c:5721`–`5727`, `572a`,
 `572c` or `572f`) until the udev rule ejects them, so check `lsusb` after
 plugging in.
