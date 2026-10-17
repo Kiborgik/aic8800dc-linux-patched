@@ -1659,7 +1659,7 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
 
 netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *dev)
 {
-    int rtap_len, ret, idx, tmp_len;
+    int rtap_len, ret, idx;
     struct ieee80211_radiotap_header *rtap_hdr; // net/ieee80211_radiotap.h
     struct ieee80211_radiotap_iterator iterator; // net/cfg80211.h
     u8_l *rtap_buf = (u8_l *)skb->data;
@@ -1670,43 +1670,41 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
     struct rwnx_txhdr *txhdr;
     struct rwnx_sw_txhdr *sw_txhdr;
     struct txdesc_api *desc;
-    struct rwnx_sta *sta;
+    struct rwnx_sta *sta = NULL;
     struct rwnx_txq *txq;
-    u16_l frame_len, headroom, frame_oft;
-    u8_l tid, rate_fmt = FORMATMOD_NON_HT, rate_idx = 0, txsig_bw = PHY_CHNL_BW_20;
+    u16_l frame_len, headroom;
+    u8_l rate_fmt = FORMATMOD_NON_HT, rate_idx = 0, txsig_bw = PHY_CHNL_BW_20;
     u8_l *pframe, *data;
-    bool robust;
     struct sk_buff *skb_mgmt;
-    bool offchan = false;
-    int nx_off_chan_txq_idx = NX_OFF_CHAN_TXQ_IDX;
 
-    rtap_hdr = (struct ieee80211_radiotap_header*)(rtap_buf);
+    /* ieee80211_get_radiotap_len() reads it_len, so first make sure the
+     * complete fixed radiotap header is present.  Injection comes from
+     * userspace and must be treated as untrusted input.
+     */
+    if (unlikely(skb->len < sizeof(*rtap_hdr)))
+        goto drop;
+
+    rtap_hdr = (struct ieee80211_radiotap_header *)rtap_buf;
     rtap_len = ieee80211_get_radiotap_len(rtap_buf);
-    frame_len = skb->len;
+    if (unlikely(skb->len > 0xffff))
+        goto drop;
+    frame_len = (u16_l)skb->len;
 
-    printk("rwnx_start_monitor_if_xmit, skb_len=%d, rtap_len=%d\n", skb->len, rtap_len);
-
-    if((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8801) || 
-        ((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8800DC ||
-        g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8800DW) && chip_id < 3)){
-            nx_off_chan_txq_idx = NX_OFF_CHAN_TXQ_IDX_FOR_OLD_IC;
-    }
-
-
-    if (unlikely(rtap_hdr->it_version))
-        goto free_tag;
-
-    if (unlikely(skb->len < rtap_len))
-        goto free_tag;
-
-    if (unlikely(rtap_len < sizeof(struct ieee80211_radiotap_header)))
-        goto free_tag;
+    if (unlikely(rtap_hdr->it_version ||
+                 rtap_len < sizeof(*rtap_hdr) ||
+                 rtap_len > skb->len))
+        goto drop;
 
     frame_len -= rtap_len;
+    if (unlikely(frame_len < 10))
+        goto drop;
+
     pframe = rtap_buf + rtap_len;
 
     // Parse radiotap for injection items and overwrite attribs as needed
     ret = ieee80211_radiotap_iterator_init(&iterator, rtap_hdr, rtap_len, NULL);
+    if (unlikely(ret))
+        goto drop;
     while (!ret) {
         ret = ieee80211_radiotap_iterator_next(&iterator);
         if (ret) {
@@ -1716,7 +1714,7 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
             case IEEE80211_RADIOTAP_RATE:
                 // This is basic 802.11b/g rate; use MCS/VHT for higher rates
                 rate = *iterator.this_arg;
-                printk("rate=0x%x\n", rate);
+                pr_debug("rate=0x%x\n", rate);
                 for (idx = 0; idx < HW_RATE_MAX; idx++) {
                     if ((rate * 5) == tx_legrates_lut_rate[idx]) {
                         break;
@@ -1725,26 +1723,26 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
                 if (idx < HW_RATE_MAX) {
                     rate_idx = idx;
                 } else {
-                    printk("invalid radiotap rate: %d\n", rate);
+                    pr_debug("invalid radiotap rate: %d\n", rate);
                 }
                 break;
 
             case IEEE80211_RADIOTAP_TX_FLAGS: {
                 u16_l txflags = get_unaligned_le16(iterator.this_arg);
-                printk("txflags=0x%x\n", txflags);
+                pr_debug("txflags=0x%x\n", txflags);
                 if ((txflags & IEEE80211_RADIOTAP_F_TX_NOACK) == 0) {
-                    printk("  TX_NOACK\n");
+                    pr_debug("  TX_NOACK\n");
                 }
                 if (txflags & 0x0010) { // Use preconfigured seq num
                     // NOTE: this is currently ignored due to qos_en=_FALSE and HW seq num override
-                    printk("  GetSequence\n");
+                    pr_debug("  GetSequence\n");
                 }
             }
             break;
 
             case IEEE80211_RADIOTAP_MCS: {
                 u8_l mcs_have = iterator.this_arg[0];
-                printk("mcs_have=0x%x\n", mcs_have);
+                pr_debug("mcs_have=0x%x\n", mcs_have);
                 rate_fmt = FORMATMOD_HT_MF;
                 if (mcs_have & IEEE80211_RADIOTAP_MCS_HAVE_BW) {
                     u8_l bw = (iterator.this_arg[1] & IEEE80211_RADIOTAP_MCS_BW_MASK);
@@ -1758,7 +1756,7 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
                         bw = IEEE80211_RADIOTAP_MCS_BW_20;
                         ch_offset = 2; // CHNL_OFFSET_UPPER;
                     }
-                    printk("  bw=%d, ch_offset=%d\n", bw, ch_offset);
+                    pr_debug("  bw=%d, ch_offset=%d\n", bw, ch_offset);
                 }
                 if (mcs_have & IEEE80211_RADIOTAP_MCS_HAVE_MCS) {
                     u8_l fixed_rate = iterator.this_arg[2] & 0x7f;
@@ -1766,17 +1764,17 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
                         fixed_rate = 0;
                     }
                     rate_idx = fixed_rate;
-                    printk("  fixed_rate=0x%x\n", fixed_rate);
+                    pr_debug("  fixed_rate=0x%x\n", fixed_rate);
                 }
                 if ((mcs_have & IEEE80211_RADIOTAP_MCS_HAVE_GI) && (iterator.this_arg[1] & IEEE80211_RADIOTAP_MCS_SGI)) {
-                    printk("  sgi\n");
+                    pr_debug("  sgi\n");
                 }
                 if ((mcs_have & IEEE80211_RADIOTAP_MCS_HAVE_FEC) && (iterator.this_arg[1] & IEEE80211_RADIOTAP_MCS_FEC_LDPC)) {
-                    printk("  ldpc\n");
+                    pr_debug("  ldpc\n");
                 }
                 if (mcs_have & IEEE80211_RADIOTAP_MCS_HAVE_STBC) {
                     u8 stbc = (iterator.this_arg[1] & IEEE80211_RADIOTAP_MCS_STBC_MASK) >> IEEE80211_RADIOTAP_MCS_STBC_SHIFT;
-                    printk("  stbc=0x%x\n", stbc);
+                    pr_debug("  stbc=0x%x\n", stbc);
                 }
             }
             break;
@@ -1786,17 +1784,17 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
                 u8 known = iterator.this_arg[0];
                 u8 flags = iterator.this_arg[2];
                 rate_fmt = FORMATMOD_VHT;
-                printk("known=0x%x, flags=0x%x\n", known, flags);
+                pr_debug("known=0x%x, flags=0x%x\n", known, flags);
                 // NOTE: this code currently only supports 1SS for radiotap defined rates
                 if ((known & IEEE80211_RADIOTAP_VHT_KNOWN_STBC) && (flags & IEEE80211_RADIOTAP_VHT_FLAG_STBC)) {
-                    printk("  stbc\n");
+                    pr_debug("  stbc\n");
                 }
                 if ((known & IEEE80211_RADIOTAP_VHT_KNOWN_GI) && (flags & IEEE80211_RADIOTAP_VHT_FLAG_SGI)) {
-                    printk("  sgi\n");
+                    pr_debug("  sgi\n");
                 }
                 if (known & IEEE80211_RADIOTAP_VHT_KNOWN_BANDWIDTH) {
                     u8_l bw = iterator.this_arg[3] & 0x1F;
-                    printk("  bw=0x%x\n",bw);
+                    pr_debug("  bw=0x%x\n",bw);
                     // NOTE: there are various L and U, but we just use straight 20/40/80
                     // since it's not clear how to set CHNL_OFFSET_LOWER/_UPPER with different
                     // sideband sizes/configurations.  TODO.
@@ -1804,26 +1802,26 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
                     txsig_bw = PHY_CHNL_BW_40;
                     if (bw == 0) {
                         txsig_bw = PHY_CHNL_BW_20;
-                        printk("  20M\n");
+                        pr_debug("  20M\n");
                     } else if (bw >=1 && bw <= 3) {
-                        printk("  40M\n");
+                        pr_debug("  40M\n");
                     } else if (bw >=4 && bw <= 10) {
-                        printk("  80M\n");
+                        pr_debug("  80M\n");
                     } else if (bw >= 11 && bw <= 25) {
-                        printk("  160M\n");
+                        pr_debug("  160M\n");
                     }
                 }
                 // User 0
                 nss = iterator.this_arg[4] & 0x0F; // Number of spatial streams
-                printk("  nss=0x%x\n", nss);
+                pr_debug("  nss=0x%x\n", nss);
                 if (nss > 0) {
                     if (nss > 4) nss = 4;
                     mcs = (iterator.this_arg[4]>>4) & 0x0F; // MCS rate index
                     if (mcs > 8) mcs = 9;
                     rate_idx = mcs;
-                    printk("    mcs=0x%x\n", mcs);
+                    pr_debug("    mcs=0x%x\n", mcs);
                     if (iterator.this_arg[8] & IEEE80211_RADIOTAP_CODING_LDPC_USER0) {
-                        printk("    ldpc\n");
+                        pr_debug("    ldpc\n");
                     }
                 }
             }
@@ -1853,16 +1851,19 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
                 }
                 if (data2 & IEEE80211_RADIOTAP_HE_DATA2_GI_KNOWN) {
                     u8 gi = (data5 & IEEE80211_RADIOTAP_HE_DATA5_GI) >> 4;
-                    printk("  gi: %d\n", gi);
+                    pr_debug("  gi: %d\n", gi);
                 }
             }
             break;
 
             default:
-                printk("unparsed arg: 0x%x\n",iterator.this_arg_index);
+                pr_debug("unparsed arg: 0x%x\n",iterator.this_arg_index);
                 break;
         }
     }
+
+    if (unlikely(ret != -ENOENT))
+        goto drop;
 
     #if 0
     // dump buffer
@@ -1871,7 +1872,7 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
         tmp_len = skb->len;
     }
     for (idx = 0; idx < tmp_len; idx+=16) {
-        printk("[%04X] %02X %02X %02X %02X %02X %02X %02X %02X   %02X %02X %02X %02X %02X %02X %02X %02X\n", idx,
+        pr_debug("[%04X] %02X %02X %02X %02X %02X %02X %02X %02X   %02X %02X %02X %02X %02X %02X %02X %02X\n", idx,
             rtap_buf[idx+0],rtap_buf[idx+1],rtap_buf[idx+2],rtap_buf[idx+3],
             rtap_buf[idx+4],rtap_buf[idx+5],rtap_buf[idx+6],rtap_buf[idx+7],
             rtap_buf[idx+8],rtap_buf[idx+9],rtap_buf[idx+10],rtap_buf[idx+11],
@@ -1879,52 +1880,41 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
     }
     #endif
 
-    /* Get the STA id and TID information */
-    sta = rwnx_get_tx_priv(vif, skb, &tid);
-    //if (!sta) {
-    //    printk("sta=null, tid=0x%x\n", tid);
-    //}
-    /* Set TID and Queues indexes */
-    if (sta) {
-        txq = rwnx_txq_sta_get(sta, 8, rwnx_hw);
-    } else {
-        if (offchan)
-            txq = &rwnx_hw->txq[nx_off_chan_txq_idx];
-        else
-            txq = rwnx_txq_vif_get(vif, NX_UNK_TXQ_TYPE);
-    }
+    /* A standalone monitor VIF has no associated station.  Its management
+     * queue is initialized by rwnx_txq_unk_vif_init() when monitor mode is
+     * enabled.  The netdev queue used to reach this function is deliberately
+     * independent from this firmware queue (see rwnx_select_monitor_queue).
+     */
+    txq = rwnx_txq_vif_get(vif, NX_UNK_TXQ_TYPE);
     if (txq->idx == TXQ_INACTIVE) {
-        printk("TXQ_INACTIVE\n");
-        goto free_tag;
+        netdev_warn(dev, "monitor TX queue is inactive\n");
+        goto drop;
     }
     // prepare to xmit
     headroom = sizeof(struct rwnx_txhdr);
     skb_mgmt = dev_alloc_skb(headroom + frame_len);
     if (!skb_mgmt) {
-        printk("skb_mgmt alloc fail\n");
-        goto free_tag;
+        pr_debug("skb_mgmt alloc fail\n");
+        goto drop;
     }
     skb_reserve(skb_mgmt, headroom);
     data = skb_put(skb_mgmt, frame_len);
     /* Copy the provided data */
     memcpy(data, pframe, frame_len);
-    robust = ieee80211_is_robust_mgmt_frame(
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 15, 0))
-		(void*)skb_mgmt
-#else
-		skb_mgmt
-#endif
-		);
     skb_push(skb_mgmt, headroom);
     /* Fill the TX Header */
     txhdr = (struct rwnx_txhdr *)skb_mgmt->data;
     txhdr->hw_hdr.cfm.status.value = 0;
     /* Fill the SW TX Header */
-    sw_txhdr = kmem_cache_alloc(rwnx_hw->sw_txhdr_cache, GFP_ATOMIC);
+    /* The descriptor is copied verbatim to the USB transfer.  In particular,
+     * a stale ethertype of 0x8e88 selects the EAPOL/confirmation path, so it
+     * must not contain data left by a previous slab user.
+     */
+    sw_txhdr = kmem_cache_zalloc(rwnx_hw->sw_txhdr_cache, GFP_ATOMIC);
     if (unlikely(sw_txhdr == NULL)) {
         dev_kfree_skb(skb_mgmt);
-        printk("sw_txhdr alloc fail\n");
-        goto free_tag;
+        pr_debug("sw_txhdr alloc fail\n");
+        goto drop;
     }
     txhdr->sw_hdr = sw_txhdr;
     sw_txhdr->txq = txq;
@@ -1942,14 +1932,17 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
                             ((rate_idx << MCS_INDEX_TX_RCX_OFT) & MCS_INDEX_TX_RCX_MASK); // from radiotap
     /* Fill the Descriptor to be provided to the MAC SW */
     desc = &sw_txhdr->desc;
-    desc->host.staid = (sta) ? sta->sta_idx : 0xFF;
+    desc->host.ethertype = 0;
+    desc->host.staid = 0xFF;
     desc->host.vif_idx = vif->vif_index;
     desc->host.tid = 0xFF;
     desc->host.flags = TXU_CNTRL_MGMT;
-    if (robust) {
-        desc->host.flags |= TXU_CNTRL_MGMT_ROBUST;
-    }
-    frame_oft = sizeof(struct rwnx_txhdr) - offsetof(struct rwnx_txhdr, hw_hdr);
+
+    /* Do not set TXU_CNTRL_MGMT_ROBUST for injected deauth/disassoc frames.
+     * "Robust" here asks firmware to apply management-frame protection using
+     * the VIF security context.  Monitor injection must transmit the supplied
+     * MPDU unchanged; a standalone monitor VIF has no pairwise PMF key.
+     */
 	#if 0
     #ifdef CONFIG_RWNX_SPLIT_TX_BUF
     desc->host.packet_addr[0] = sw_txhdr->dma_addr + frame_oft;
@@ -1963,16 +1956,35 @@ netdev_tx_t rwnx_start_monitor_if_xmit(struct sk_buff *skb, struct net_device *d
 	desc->host.packet_len = frame_len;
 	#endif
 
+    if (unlikely(rwnx_prep_tx(rwnx_hw, txhdr))) {
+        kmem_cache_free(rwnx_hw->sw_txhdr_cache, sw_txhdr);
+        dev_kfree_skb_any(skb_mgmt);
+        goto busy;
+    }
+
     desc->host.status_desc_addr = sw_txhdr->dma_addr;
 
+    /* A monitor VIF has no associated station whose normal data TXQ can be
+     * started by the firmware.  Queueing the raw MPDU through the regular
+     * scheduler therefore leaves it pending forever and eventually stops the
+     * netdev subqueue.  The descriptor and an active HW queue have already
+     * been selected above, so submit it through the driver's normal USB/SDIO
+     * push routine directly.  rwnx_tx_push() requires tx_lock.
+     */
     spin_lock_bh(&rwnx_hw->tx_lock);
-    if (rwnx_txq_queue_skb(skb_mgmt, txq, rwnx_hw, false))
-        rwnx_hwq_process(rwnx_hw, txq->hwq);
+    rwnx_tx_push(rwnx_hw, txhdr, 0);
     spin_unlock_bh(&rwnx_hw->tx_lock);
 
 free_tag:
     dev_kfree_skb_any(skb);
     return NETDEV_TX_OK;
+
+drop:
+    vif->net_stats.tx_dropped++;
+    goto free_tag;
+
+busy:
+    return NETDEV_TX_BUSY;
 }
 #endif
 

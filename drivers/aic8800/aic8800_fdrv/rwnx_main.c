@@ -2620,6 +2620,22 @@ static u16 rwnx_select_queue(struct net_device *dev, struct sk_buff *skb,
     return rwnx_select_txq(rwnx_vif, skb);
 }
 
+#ifdef CONFIG_RWNX_MON_XMIT
+/* Radiotap frames are not Ethernet data frames and have no associated STA.
+ * rwnx_select_queue() consequently maps them to the BCMC netdev subqueue,
+ * which is not initialized for a standalone monitor VIF.  The qdisc then
+ * retains every frame without ever calling ndo_start_xmit.  Queue zero is
+ * started by netif_start_queue() when the monitor interface is opened; the
+ * monitor xmit routine selects its own firmware management queue below it.
+ */
+static u16 rwnx_select_monitor_queue(struct net_device *dev,
+                                     struct sk_buff *skb,
+                                     struct net_device *sb_dev)
+{
+    return 0;
+}
+#endif
+
 /**
  * int (*ndo_set_mac_address)(struct net_device *dev, void *addr);
  *	This function  is called when the Media Access Control address
@@ -2664,7 +2680,7 @@ static const struct net_device_ops rwnx_netdev_monitor_ops = {
     .ndo_stop               = rwnx_close,
     #ifdef CONFIG_RWNX_MON_XMIT
     .ndo_start_xmit         = rwnx_start_monitor_if_xmit,
-    .ndo_select_queue       = rwnx_select_queue,
+    .ndo_select_queue       = rwnx_select_monitor_queue,
     #endif
     .ndo_get_stats          = rwnx_get_stats,
     .ndo_set_mac_address    = rwnx_set_mac_address,
