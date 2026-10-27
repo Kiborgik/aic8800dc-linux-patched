@@ -994,31 +994,49 @@ int rwnx_chanctx_valid(struct rwnx_hw *rwnx_hw, u8 ch_idx)
 static void rwnx_del_csa(struct rwnx_vif *vif)
 {
     //struct rwnx_hw *rwnx_hw = vif->rwnx_hw;
-    struct rwnx_csa *csa = vif->ap.csa;
+    struct rwnx_csa *csa;
+
+    spin_lock_bh(&vif->rwnx_hw->cb_lock);
+    csa = vif->ap.csa;
+    vif->ap.csa = NULL;
+    spin_unlock_bh(&vif->rwnx_hw->cb_lock);
 
     if (!csa)
         return;
 
     rwnx_del_bcn(&csa->bcn);
     kfree(csa);
-    vif->ap.csa = NULL;
 }
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+static void rwnx_csa_finish(struct wiphy *wiphy, struct wiphy_work *ws)
+#else
 static void rwnx_csa_finish(struct work_struct *ws)
+#endif
 {
 
-    struct rwnx_csa *csa = container_of(ws, struct rwnx_csa, work);
-    struct rwnx_vif *vif = csa->vif;
+    struct rwnx_vif *vif = container_of(ws, struct rwnx_vif, csa_work);
     struct rwnx_hw *rwnx_hw = vif->rwnx_hw;
-    int error = csa->status;
+    struct rwnx_csa *csa;
+    int error;
     u8 *buf, *pos;
 
 	RWNX_DBG(RWNX_FN_ENTRY_STR);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
+    mutex_lock(&vif->wdev.mtx);
+#endif
+    spin_lock_bh(&rwnx_hw->cb_lock);
+    csa = vif->ap.csa;
+    spin_unlock_bh(&rwnx_hw->cb_lock);
+    if (!csa)
+        goto out;
+    error = csa->status;
+
     buf = kmalloc(csa->bcn.len, GFP_KERNEL);
     if (!buf) {
         printk ("%s buf fail\n", __func__);
-        return;
+        goto out;
     }
     pos = buf;
 
@@ -1041,10 +1059,12 @@ static void rwnx_csa_finish(struct work_struct *ws)
     if (!error) {
         error = rwnx_send_bcn(rwnx_hw, buf, vif->vif_index, csa->bcn.len);
         if (error)
-            return;
+            goto out;
         error = rwnx_send_bcn_change(rwnx_hw, vif->vif_index, csa->elem.dma_addr,
                                      csa->bcn.len, csa->bcn.head_len,
                                      csa->bcn.tim_len, NULL);
+    } else {
+        kfree(buf);
     }
 
     if (error) {
@@ -1054,7 +1074,6 @@ static void rwnx_csa_finish(struct work_struct *ws)
         cfg80211_disconnected(vif->ndev, 0, NULL, 0, 0, GFP_KERNEL);
         #endif
     } else {
-        rtnl_lock();
         spin_lock_bh(&rwnx_hw->cb_lock);
         rwnx_chanctx_unlink(vif);
         rwnx_chanctx_link(vif, csa->ch_idx, &csa->chandef);
@@ -1073,10 +1092,13 @@ static void rwnx_csa_finish(struct work_struct *ws)
 #else
                 cfg80211_ch_switch_notify(vif->ndev, &csa->chandef);
 #endif
-
-        rtnl_unlock();
     }
     rwnx_del_csa(vif);
+out:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
+    mutex_unlock(&vif->wdev.mtx);
+#endif
+    return;
 }
 #endif
 
@@ -1340,6 +1362,10 @@ static int rwnx_close(struct net_device *dev)
 #endif
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
+    cancel_work_sync(&rwnx_vif->csa_work);
+#endif
 
 #if defined(AICWF_USB_SUPPORT) || defined(AICWF_SDIO_SUPPORT)
     if (scanning){
@@ -2772,6 +2798,11 @@ static struct rwnx_vif *rwnx_interface_add(struct rwnx_hw *rwnx_hw,
     vif->ch_index = RWNX_CH_NOT_SET;
     memset(&vif->net_stats, 0, sizeof(vif->net_stats));
     vif->is_p2p_vif = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    wiphy_work_init(&vif->csa_work, rwnx_csa_finish);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+    INIT_WORK(&vif->csa_work, rwnx_csa_finish);
+#endif
 #ifdef CONFIG_BR_SUPPORT
     spin_lock_init(&vif->br_ext_lock);
 #endif /* CONFIG_BR_SUPPORT */
@@ -3515,7 +3546,11 @@ static int rwnx_cfg80211_add_key(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
                                                                  int link_id,
 #endif
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+                                 u8 key_index, enum nl80211_key_type type, const u8 *mac_addr,
+#else
                                  u8 key_index, bool pairwise, const u8 *mac_addr,
+#endif
                                  struct key_params *params)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0))
@@ -3523,6 +3558,9 @@ static int rwnx_cfg80211_add_key(struct wiphy *wiphy,
 #endif
     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
     struct rwnx_vif *vif = netdev_priv(netdev);
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+    bool pairwise = type == NL80211_KEYTYPE_PAIRWISE;
+#endif
     int i, error = 0;
     struct mm_key_add_cfm key_add_cfm;
     u8_l cipher = 0;
@@ -3620,7 +3658,11 @@ static int rwnx_cfg80211_get_key(struct wiphy *wiphy,
                                                                  int link_id,
 #endif
 
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+                                 u8 key_index, enum nl80211_key_type type, const u8 *mac_addr,
+#else
                                  u8 key_index, bool pairwise, const u8 *mac_addr,
+#endif
                                  void *cookie,
                                  void (*callback)(void *cookie, struct key_params*))
 {
@@ -3644,7 +3686,11 @@ static int rwnx_cfg80211_del_key(struct wiphy *wiphy,
                                                                  int link_id,
 #endif
 
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+                                 u8 key_index, enum nl80211_key_type type, const u8 *mac_addr)
+#else
                                  u8 key_index, bool pairwise, const u8 *mac_addr)
+#endif
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0))
     struct net_device *netdev = wdev->netdev;
@@ -3793,7 +3839,13 @@ static int rwnx_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
                                 0,
 #endif
-	sme->key_idx, false, NULL, &key_params);
+	sme->key_idx,
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+	NL80211_KEYTYPE_GROUP,
+#else
+	false,
+#endif
+	NULL, &key_params);
     }
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(CONFIG_WPA3_FOR_OLD_KERNEL)
     else if ((sme->auth_type == NL80211_AUTHTYPE_SAE) &&
@@ -4311,14 +4363,21 @@ static void apm_staloss_work_process(struct work_struct *work)
 }
 
 
+struct apm_probe_req {
+       struct work_struct work;
+       struct rwnx_vif *vif;
+       u8 mac[ETH_ALEN];
+       u64 cookie;
+};
+
 static void apm_probe_sta_work_process(struct work_struct *work)
 {
-       struct apm_probe_sta *probe_sta = container_of(work, struct apm_probe_sta, apmprobestaWork);
-       struct rwnx_vif *rwnx_vif = container_of(probe_sta, struct rwnx_vif, sta_probe);
+       struct apm_probe_req *req = container_of(work, struct apm_probe_req, work);
+       struct rwnx_vif *rwnx_vif = req->vif;
        bool found = false;
        struct rwnx_sta *cur, *tmp;
 
-       u8 *mac = rwnx_vif->sta_probe.sta_mac_addr;
+       u8 *mac = req->mac;
 
        RWNX_DBG(RWNX_FN_ENTRY_STR);
 
@@ -4334,23 +4393,21 @@ static void apm_probe_sta_work_process(struct work_struct *work)
        printk("sta %pM found = %d\n", mac, found);
 #if defined(AIC_CFG80211_PROBE_STATUS_LINK_ID) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
        if(found)
-               cfg80211_probe_status(rwnx_vif->ndev, mac, (u64)rwnx_vif->sta_probe.probe_id, -1, 1, 0, false, GFP_ATOMIC);
+               cfg80211_probe_status(rwnx_vif->ndev, mac, req->cookie, -1, 1, 0, false, GFP_ATOMIC);
        else
-               cfg80211_probe_status(rwnx_vif->ndev, mac, (u64)rwnx_vif->sta_probe.probe_id, -1, 0, 0, false, GFP_ATOMIC);
+               cfg80211_probe_status(rwnx_vif->ndev, mac, req->cookie, -1, 0, 0, false, GFP_ATOMIC);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
        if(found)
-               cfg80211_probe_status(rwnx_vif->ndev, mac, (u64)rwnx_vif->sta_probe.probe_id, 1, 0, false, GFP_ATOMIC);
+               cfg80211_probe_status(rwnx_vif->ndev, mac, req->cookie, 1, 0, false, GFP_ATOMIC);
        else
-               cfg80211_probe_status(rwnx_vif->ndev, mac, (u64)rwnx_vif->sta_probe.probe_id, 0, 0, false, GFP_ATOMIC);
+               cfg80211_probe_status(rwnx_vif->ndev, mac, req->cookie, 0, 0, false, GFP_ATOMIC);
 #else
        if(found)
-                cfg80211_probe_status(rwnx_vif->ndev, mac, (u64)rwnx_vif->sta_probe.probe_id, 1, GFP_ATOMIC);
+                cfg80211_probe_status(rwnx_vif->ndev, mac, req->cookie, 1, GFP_ATOMIC);
         else
-                cfg80211_probe_status(rwnx_vif->ndev, mac, (u64)rwnx_vif->sta_probe.probe_id, 0, GFP_ATOMIC);
+                cfg80211_probe_status(rwnx_vif->ndev, mac, req->cookie, 0, GFP_ATOMIC);
 #endif
-#if !defined(AIC_CFG80211_COOKIE_INPUT) && LINUX_VERSION_CODE < KERNEL_VERSION(7, 3, 0)
-       rwnx_vif->sta_probe.probe_id ++;
-#endif
+       kfree(req);
 }
 
 /**
@@ -4540,13 +4597,13 @@ static int rwnx_cfg80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
     struct apm_start_cfm apm_start_cfm;
     struct rwnx_ipc_elem_var elem;
     struct rwnx_sta *sta;
+    struct workqueue_struct *probe_wq;
     int error = 0;
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 
-    INIT_WORK(&rwnx_vif->sta_probe.apmprobestaWork, apm_probe_sta_work_process);
-    rwnx_vif->sta_probe.apmprobesta_wq = create_singlethread_workqueue("apmprobe_wq");
-    if (!rwnx_vif->sta_probe.apmprobesta_wq) {
+    probe_wq = create_singlethread_workqueue("apmprobe_wq");
+    if (!probe_wq) {
 	    txrx_err("insufficient memory to create apmprobe_wq.\n");
 	    return -ENOBUFS;
     }
@@ -4579,6 +4636,7 @@ static int rwnx_cfg80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
             sta->ps.active = false;
             rwnx_mu_group_sta_init(sta, NULL);
             spin_lock_bh(&rwnx_hw->cb_lock);
+            rwnx_vif->sta_probe.apmprobesta_wq = probe_wq;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 9, 0)
 	    rwnx_chanctx_link(rwnx_vif, apm_start_cfm.ch_idx,
                               NULL);
@@ -4626,6 +4684,9 @@ static int rwnx_cfg80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
 
   end:
     //rwnx_ipc_elem_var_deallocs(rwnx_hw, &elem);
+
+    if (error)
+        destroy_workqueue(probe_wq);
 
     return error;
 }
@@ -4697,6 +4758,7 @@ static int rwnx_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
 {
     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+    struct workqueue_struct *probe_wq;
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 
@@ -4709,6 +4771,8 @@ static int rwnx_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
     rwnx_send_apm_stop_req(rwnx_hw, rwnx_vif);
     spin_lock_bh(&rwnx_hw->cb_lock);
     rwnx_chanctx_unlink(rwnx_vif);
+    probe_wq = rwnx_vif->sta_probe.apmprobesta_wq;
+    rwnx_vif->sta_probe.apmprobesta_wq = NULL;
     spin_unlock_bh(&rwnx_hw->cb_lock);
 
     /* delete any remaining STA*/
@@ -4726,9 +4790,12 @@ static int rwnx_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
     rwnx_txq_vif_deinit(rwnx_hw, rwnx_vif);
     rwnx_del_bcn(&rwnx_vif->ap.bcn);
     rwnx_del_csa(rwnx_vif);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    wiphy_work_cancel(wiphy, &rwnx_vif->csa_work);
+#endif
 
-    flush_workqueue(rwnx_vif->sta_probe.apmprobesta_wq);
-    destroy_workqueue(rwnx_vif->sta_probe.apmprobesta_wq);
+    flush_workqueue(probe_wq);
+    destroy_workqueue(probe_wq);
 
     netdev_info(dev, "AP Stopped");
 
@@ -4827,7 +4894,9 @@ static int rwnx_cfg80211_probe_client(struct wiphy *wiphy, struct net_device *de
 {
     //struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
     struct rwnx_vif *vif = netdev_priv(dev);
-    struct rwnx_sta *sta = NULL;
+    struct rwnx_sta *sta;
+    struct apm_probe_req *req;
+    bool found = false;
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 
@@ -4835,26 +4904,37 @@ static int rwnx_cfg80211_probe_client(struct wiphy *wiphy, struct net_device *de
             (RWNX_VIF_TYPE(vif) != NL80211_IFTYPE_AP_VLAN))
             return -EINVAL;
 
+    req = kmalloc(sizeof(*req), GFP_KERNEL);
+    if (!req)
+        return -ENOMEM;
+    INIT_WORK(&req->work, apm_probe_sta_work_process);
+    req->vif = vif;
+    memcpy(req->mac, peer, ETH_ALEN);
+
 	spin_lock_bh(&vif->rwnx_hw->cb_lock);
-    list_for_each_entry(sta, &vif->ap.sta_list, list){
-        if (sta->valid && ether_addr_equal(sta->mac_addr, peer))
-            break;
+    if (vif->sta_probe.apmprobesta_wq) {
+        list_for_each_entry(sta, &vif->ap.sta_list, list){
+            if (sta->valid && ether_addr_equal(sta->mac_addr, peer)) {
+                found = true;
+                break;
+            }
+        }
+    }
+    if (found) {
+#if defined(AIC_CFG80211_COOKIE_INPUT) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+        req->cookie = cookie;
+#else
+        req->cookie = vif->sta_probe.probe_id++;
+        *cookie = req->cookie;
+#endif
+        queue_work(vif->sta_probe.apmprobesta_wq, &req->work);
     }
 	spin_unlock_bh(&vif->rwnx_hw->cb_lock);
 
-    if (!sta)
+    if (!found) {
+        kfree(req);
         return -ENOENT;
-
-
-    memcpy(vif->sta_probe.sta_mac_addr, peer, 6);
-#if defined(AIC_CFG80211_COOKIE_INPUT) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
-    vif->sta_probe.probe_id = cookie;
-    queue_work(vif->sta_probe.apmprobesta_wq, &vif->sta_probe.apmprobestaWork);
-#else
-    queue_work(vif->sta_probe.apmprobesta_wq, &vif->sta_probe.apmprobestaWork);
-
-    *cookie = vif->sta_probe.probe_id;
-#endif
+    }
 
     return 0;
 }
@@ -5612,13 +5692,16 @@ static int rwnx_cfg80211_channel_switch(struct wiphy *wiphy,
     buf = rwnx_build_bcn(bcn_after, &params->beacon_after);
     if (!buf) {
         error = -ENOMEM;
-        rwnx_del_csa(vif);
+        rwnx_del_bcn(bcn_after);
+        kfree(csa);
         goto end;
     }
 
-    vif->ap.csa = csa;
     csa->vif = vif;
     csa->chandef = params->chandef;
+    spin_lock_bh(&rwnx_hw->cb_lock);
+    vif->ap.csa = csa;
+    spin_unlock_bh(&rwnx_hw->cb_lock);
 
     /* Send new Beacon. FW will extract channel and count from the beacon */
     error = rwnx_send_bcn_change(rwnx_hw, vif->vif_index, elem.dma_addr,
@@ -5628,8 +5711,6 @@ static int rwnx_cfg80211_channel_switch(struct wiphy *wiphy,
         rwnx_del_csa(vif);
         goto end;
     } else {
-        INIT_WORK(&csa->work, rwnx_csa_finish);
-
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
 		cfg80211_ch_switch_started_notify(dev, &csa->chandef, 0, params->count, false);        
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)

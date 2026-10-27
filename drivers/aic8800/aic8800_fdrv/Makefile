@@ -311,6 +311,9 @@ endif
 ifneq ($(shell grep -A4 '(\*remain_on_channel)' $(CFG80211_HDR) | grep -c 'rx_addr'),0)
 ccflags-y += -DAIC_CFG80211_ROC_RX_ADDR
 endif
+ifneq ($(shell grep -A2 '(\*add_key)' $(CFG80211_HDR) | grep -c 'enum nl80211_key_type'),0)
+ccflags-y += -DAIC_CFG80211_KEY_TYPE
+endif
 endif
 
 # Platform support list

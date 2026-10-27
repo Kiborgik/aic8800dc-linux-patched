@@ -266,14 +266,11 @@ struct rwnx_csa {
     int count;
     int status;
     int ch_idx;
-    struct work_struct work;
 };
 
 struct apm_probe_sta {
-       u8 sta_mac_addr[6];
        u8 vif_idx;
        u64 probe_id;
-       struct work_struct apmprobestaWork;
        struct workqueue_struct *apmprobesta_wq;
 };
 
@@ -394,6 +391,11 @@ struct rwnx_vif {
 	u8_l key_has_add;
 	u8_l is_p2p_vif;
 	struct apm_probe_sta sta_probe;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+	struct wiphy_work csa_work;
+#else
+	struct work_struct csa_work;
+#endif
 
     #ifdef CONFIG_BR_SUPPORT
 	spinlock_t			    br_ext_lock;
