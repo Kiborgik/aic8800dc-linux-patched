@@ -3515,7 +3515,11 @@ static int rwnx_cfg80211_add_key(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
                                                                  int link_id,
 #endif
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+                                 u8 key_index, enum nl80211_key_type type, const u8 *mac_addr,
+#else
                                  u8 key_index, bool pairwise, const u8 *mac_addr,
+#endif
                                  struct key_params *params)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0))
@@ -3523,6 +3527,9 @@ static int rwnx_cfg80211_add_key(struct wiphy *wiphy,
 #endif
     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
     struct rwnx_vif *vif = netdev_priv(netdev);
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+    bool pairwise = type == NL80211_KEYTYPE_PAIRWISE;
+#endif
     int i, error = 0;
     struct mm_key_add_cfm key_add_cfm;
     u8_l cipher = 0;
@@ -3620,7 +3627,11 @@ static int rwnx_cfg80211_get_key(struct wiphy *wiphy,
                                                                  int link_id,
 #endif
 
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+                                 u8 key_index, enum nl80211_key_type type, const u8 *mac_addr,
+#else
                                  u8 key_index, bool pairwise, const u8 *mac_addr,
+#endif
                                  void *cookie,
                                  void (*callback)(void *cookie, struct key_params*))
 {
@@ -3644,7 +3655,11 @@ static int rwnx_cfg80211_del_key(struct wiphy *wiphy,
                                                                  int link_id,
 #endif
 
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+                                 u8 key_index, enum nl80211_key_type type, const u8 *mac_addr)
+#else
                                  u8 key_index, bool pairwise, const u8 *mac_addr)
+#endif
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0))
     struct net_device *netdev = wdev->netdev;
@@ -3793,7 +3808,13 @@ static int rwnx_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
                                 0,
 #endif
-	sme->key_idx, false, NULL, &key_params);
+	sme->key_idx,
+#if defined(AIC_CFG80211_KEY_TYPE) || LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
+	NL80211_KEYTYPE_GROUP,
+#else
+	false,
+#endif
+	NULL, &key_params);
     }
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) || defined(CONFIG_WPA3_FOR_OLD_KERNEL)
     else if ((sme->auth_type == NL80211_AUTHTYPE_SAE) &&
