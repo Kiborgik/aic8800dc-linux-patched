@@ -1720,6 +1720,7 @@ void rwnx_custregd(struct rwnx_hw *rwnx_hw, struct wiphy *wiphy)
 
     rtnl_lock();
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    wiphy_lock(wiphy);
     if (regulatory_set_wiphy_regd_sync(wiphy, getRegdomainFromRwnxDB(wiphy, default_ccode))){
         wiphy_err(wiphy, "Failed to set custom regdomain\n");
     }
@@ -1734,6 +1735,9 @@ void rwnx_custregd(struct rwnx_hw *rwnx_hw, struct wiphy *wiphy)
                   "** CAUTION: USING PERMISSIVE CUSTOM REGULATORY RULES **\n"
                   "*******************************************************\n");
     }
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    wiphy_unlock(wiphy);
+#endif
      rtnl_unlock();
 #endif
 }

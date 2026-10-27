@@ -1533,14 +1533,17 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
     #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
     /* Update CSA counter if present */
     if (unlikely(params->n_csa_offsets) &&
-        vif->wdev.iftype == NL80211_IFTYPE_AP &&
-        vif->ap.csa) {
+        vif->wdev.iftype == NL80211_IFTYPE_AP) {
         int i;
 
-        data = skb->data;
-        for (i = 0; i < params->n_csa_offsets ; i++) {
-            data[params->csa_offsets[i]] = vif->ap.csa->count;
+        spin_lock_bh(&rwnx_hw->cb_lock);
+        if (vif->ap.csa) {
+            data = skb->data;
+            for (i = 0; i < params->n_csa_offsets ; i++) {
+                data[params->csa_offsets[i]] = vif->ap.csa->count;
+            }
         }
+        spin_unlock_bh(&rwnx_hw->cb_lock);
     }
     #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */
 

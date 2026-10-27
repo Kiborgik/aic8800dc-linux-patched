@@ -811,8 +811,10 @@ int rwnx_send_bcn(struct rwnx_hw *rwnx_hw,u8 *buf, u8 vif_idx, u16 bcn_len)
 	struct apm_set_bcn_ie_req *bcn_ie_req;
 	bcn_ie_req = rwnx_msg_zalloc(APM_SET_BEACON_IE_REQ, TASK_APM, DRV_TASK_ID,
 							   sizeof(struct apm_set_bcn_ie_req));
-	if (!bcn_ie_req)
+	if (!bcn_ie_req) {
+		kfree(buf);
 		return -ENOMEM;
+	}
 
 	bcn_ie_req->vif_idx = vif_idx;
 	bcn_ie_req->bcn_ie_len = bcn_len;
