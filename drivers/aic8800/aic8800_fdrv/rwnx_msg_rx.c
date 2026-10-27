@@ -419,6 +419,7 @@ static inline int rwnx_rx_csa_counter_ind(struct rwnx_hw *rwnx_hw,
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 
+    spin_lock_bh(&rwnx_hw->cb_lock);
     // Look for VIF entry
     list_for_each_entry(vif, &rwnx_hw->vifs, list) {
         if (vif->vif_index == ind->vif_index) {
@@ -429,18 +430,14 @@ static inline int rwnx_rx_csa_counter_ind(struct rwnx_hw *rwnx_hw,
 
     if (found) {
 #ifdef CONFIG_RWNX_FULLMAC
-        struct rwnx_csa *csa;
-
-        spin_lock_bh(&rwnx_hw->cb_lock);
-        csa = vif->ap.csa;
-        if (csa)
-            csa->count = ind->csa_count;
-        spin_unlock_bh(&rwnx_hw->cb_lock);
-        if (!csa)
+        if (vif->ap.csa)
+            vif->ap.csa->count = ind->csa_count;
+        else
             netdev_err(vif->ndev, "CSA counter update but no active CSA");
 
 #endif
     }
+    spin_unlock_bh(&rwnx_hw->cb_lock);
 
     return 0;
 }
@@ -456,6 +453,7 @@ static inline int rwnx_rx_csa_finish_ind(struct rwnx_hw *rwnx_hw,
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 
+    spin_lock_bh(&rwnx_hw->cb_lock);
     // Look for VIF entry
     list_for_each_entry(vif, &rwnx_hw->vifs, list) {
         if (vif->vif_index == ind->vif_index) {
@@ -467,21 +465,15 @@ static inline int rwnx_rx_csa_finish_ind(struct rwnx_hw *rwnx_hw,
     if (found) {
         if (RWNX_VIF_TYPE(vif) == NL80211_IFTYPE_AP ||
             RWNX_VIF_TYPE(vif) == NL80211_IFTYPE_P2P_GO) {
-            struct rwnx_csa *csa;
-
-            spin_lock_bh(&rwnx_hw->cb_lock);
-            csa = vif->ap.csa;
-            if (csa) {
-                csa->status = ind->status;
-                csa->ch_idx = ind->chan_idx;
+            if (vif->ap.csa) {
+                vif->ap.csa->status = ind->status;
+                vif->ap.csa->ch_idx = ind->chan_idx;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
                 wiphy_work_queue(rwnx_hw->wiphy, &vif->csa_work);
 #else
                 schedule_work(&vif->csa_work);
 #endif
-            }
-            spin_unlock_bh(&rwnx_hw->cb_lock);
-            if (!csa)
+            } else
                 netdev_err(vif->ndev, "CSA finish indication but no active CSA");
         } else {
             if (ind->status == 0) {
@@ -495,6 +487,7 @@ static inline int rwnx_rx_csa_finish_ind(struct rwnx_hw *rwnx_hw,
             }
         }
     }
+    spin_unlock_bh(&rwnx_hw->cb_lock);
 
     return 0;
 }
@@ -509,6 +502,7 @@ static inline int rwnx_rx_csa_traffic_ind(struct rwnx_hw *rwnx_hw,
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 
+    spin_lock_bh(&rwnx_hw->cb_lock);
     // Look for VIF entry
     list_for_each_entry(vif, &rwnx_hw->vifs, list) {
         if (vif->vif_index == ind->vif_index) {
@@ -523,6 +517,7 @@ static inline int rwnx_rx_csa_traffic_ind(struct rwnx_hw *rwnx_hw,
         else
             rwnx_txq_vif_stop(vif, RWNX_TXQ_STOP_CSA, rwnx_hw);
     }
+    spin_unlock_bh(&rwnx_hw->cb_lock);
 
     return 0;
 }
