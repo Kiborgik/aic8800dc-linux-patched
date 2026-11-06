@@ -53,6 +53,7 @@ int8_t rwnx_atoi(char *value);
 uint32_t rwnx_atoli(char *value);
 
 void get_fw_path(char *fw_path);
+struct file *aic_fw_filp_open(const char *path);
 void set_testmode(int val);
 int get_testmode(void);
 int get_hardware_info(void);
