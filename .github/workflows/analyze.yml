@@ -54,7 +54,7 @@ jobs:
         run: |
           . ./.github/analysis-baseline
 
-          sparse=$(grep -c 'warning:' analyze-build.log || true)
+          sparse=$(grep -cE '^[^ ]+:[0-9]+:[0-9]+: warning:' analyze-build.log || true)
           # findings, not lines: cppcheck prints the source line and a caret too
           cppcheck=$(grep -cE ': (error|warning|performance|portability|style|information):' cppcheck.log || true)
 
