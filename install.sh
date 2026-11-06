@@ -105,7 +105,6 @@ dkms build -m "${PACKAGE_NAME}" -v "${PACKAGE_VERSION}"
 echo "[5/5] Installing kernel modules..."
 dkms install -m "${PACKAGE_NAME}" -v "${PACKAGE_VERSION}"
 
-# --- Auto-load on boot ---
 tee /etc/modules-load.d/aic8800.conf > /dev/null <<EOF
 aic_load_fw
 aic8800_fdrv
@@ -114,6 +113,8 @@ EOF
 # --- Load now ---
 echo ""
 echo "Loading modules..."
+modprobe -r aic8800_fdrv 2>/dev/null || true
+modprobe -r aic_load_fw 2>/dev/null || true
 modprobe aic_load_fw || echo "  Note: aic_load_fw not loaded (plug in the device and run: sudo modprobe aic_load_fw)"
 modprobe aic8800_fdrv || echo "  Note: aic8800_fdrv not loaded (plug in the device and run: sudo modprobe aic8800_fdrv)"
 

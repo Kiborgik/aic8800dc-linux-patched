@@ -1,5 +1,7 @@
 #include <linux/version.h>
 #include <linux/vmalloc.h>
+#include <linux/sched.h>
+#include <linux/fs_struct.h>
 #include "aicbluetooth_cmds.h"
 #include "aicwf_usb.h"
 #include "md5.h"
@@ -259,9 +261,9 @@ static int aic_load_firmware(u32 ** fw_buf, const char *name, struct device *dev
 
 
     /* open the firmware file */
-    fp=filp_open(path, O_RDONLY, 0);
+    fp=aic_fw_filp_open(path);
     if(IS_ERR(fp) || (!fp)){
-            printk("%s: %s file failed to open\n", __func__, name);
+            printk("%s: %s open failed: %ld\n", __func__, path, PTR_ERR(fp));
             if(IS_ERR(fp))
 		printk("is_Err\n");
 	if((!fp))
@@ -692,6 +694,22 @@ void get_fw_path(char* fw_path){
 	}
 } 
 
+struct file *aic_fw_filp_open(const char *path)
+{
+#ifdef scoped_with_init_fs
+	if (current->flags & PF_KTHREAD) {
+		struct file *fp;
+
+		scoped_with_init_fs()
+			fp = filp_open(path, O_RDONLY, 0);
+		return fp;
+	}
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+#error "scoped_with_init_fs() missing: kthread firmware opens need init's root on 7.3+"
+#endif
+	return filp_open(path, O_RDONLY, 0);
+}
+
 void set_testmode(int val){
 	testmode = val;
 }
@@ -704,6 +722,7 @@ int get_hardware_info(void){
 	return AIC_HW_INFO;
 }
 EXPORT_SYMBOL(get_fw_path);
+EXPORT_SYMBOL_GPL(aic_fw_filp_open);
 
 EXPORT_SYMBOL(get_testmode);
 

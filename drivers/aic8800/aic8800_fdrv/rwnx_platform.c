@@ -326,9 +326,9 @@ static int rwnx_load_firmware(u32 **fw_buf, const char *name, struct device *dev
     AICWFDBG(LOGINFO, "%s :firmware path = %s  \n", __func__, path);
 
     /* open the firmware file */
-    fp = filp_open(path, O_RDONLY, 0);
+    fp = aic_fw_filp_open(path);
     if (IS_ERR_OR_NULL(fp)) {
-        AICWFDBG(LOGERROR, "%s: %s file failed to open\n", __func__, name);
+        AICWFDBG(LOGERROR, "%s: %s open failed: %ld\n", __func__, path, PTR_ERR(fp));
         *fw_buf = NULL;
         __putname(path);
         fp = NULL;
@@ -530,9 +530,9 @@ static int aic_load_firmware(u32 ** fw_buf, const char *name,
 
 
         /* open the firmware file */
-        fp=filp_open(path, O_RDONLY, 0);
+        fp=aic_fw_filp_open(path);
         if(IS_ERR(fp) || (!fp)){
-	        printk("%s: %s file failed to open\n", __func__, name);
+	        printk("%s: %s open failed: %ld\n", __func__, path, PTR_ERR(fp));
                 if(IS_ERR(fp))
 			printk("is_Err\n");
 		*fw_buf=NULL;
