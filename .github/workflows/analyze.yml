@@ -24,13 +24,23 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential linux-headers-$(uname -r) sparse cppcheck
+            build-essential linux-headers-$(uname -r) cppcheck
+
+      - name: build sparse
+        run: |
+          git clone https://git.kernel.org/pub/scm/devel/sparse/sparse.git "$RUNNER_TEMP/sparse"
+          git -C "$RUNNER_TEMP/sparse" checkout --detach 84ec0658c81db4ccc4aabc420d3dc118c2c6a310
+          make -C "$RUNNER_TEMP/sparse" -j"$(nproc)" sparse
 
       - name: sparse + gcc W=1
         run: |
           make -C /lib/modules/$(uname -r)/build \
-            M="$GITHUB_WORKSPACE/drivers/aic8800" W=1 C=1 modules \
+            M="$GITHUB_WORKSPACE/drivers/aic8800" W=1 C=1 CHECK="$RUNNER_TEMP/sparse/sparse" modules \
             2>&1 | tee analyze-build.log || true
+          grep -qE '^ +CHECK ' analyze-build.log || {
+            echo "::error::sparse did not run, see the build log"
+            exit 1
+          }
 
       - name: cppcheck
         run: |
