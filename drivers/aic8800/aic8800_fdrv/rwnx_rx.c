@@ -1009,12 +1009,16 @@ static void rwnx_rx_add_rtap_hdr(struct rwnx_hw* rwnx_hw,
         *pos = 0;
     } else {
         struct ieee80211_supported_band* band =
-                rwnx_hw->wiphy->bands[phy_info->phy_band];
+                phy_info->phy_band < NUM_NL80211_BANDS ?
+                rwnx_hw->wiphy->bands[phy_info->phy_band] : NULL;
         rtap->it_present |= cpu_to_le32(1 << IEEE80211_RADIOTAP_RATE);
-        BUG_ON((rate_idx = legrates_lut[rxvect->leg_rate]) == -1);
+        rate_idx = legrates_lut[rxvect->leg_rate];
         if (phy_info->phy_band == NL80211_BAND_5GHZ)
             rate_idx -= 4;  /* rwnx_ratetable_5ghz[0].hw_value == 4 */
-        *pos = DIV_ROUND_UP(band->bitrates[rate_idx].bitrate, 5);
+        if (band && rate_idx < band->n_bitrates)
+            *pos = DIV_ROUND_UP(band->bitrates[rate_idx].bitrate, 5);
+        else
+            *pos = 0;
     }
     pos++;
 
