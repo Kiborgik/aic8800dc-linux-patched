@@ -1978,6 +1978,8 @@ u8 rwnx_rxdataind_aicwf(struct rwnx_hw *rwnx_hw, void *hostid, void *rx_priv)
         rwnx_vif = rwnx_rx_get_vif(rwnx_hw, rwnx_hw->monitor_vif);
         if (!rwnx_vif) {
             dev_err(rwnx_hw->dev, "Received monitor frame but there is no monitor interface open\n");
+            if (status == RX_STAT_MONITOR)
+                dev_kfree_skb(skb);
             goto check_len_update;
         }
 
@@ -2018,11 +2020,19 @@ u8 rwnx_rxdataind_aicwf(struct rwnx_hw *rwnx_hw, void *hostid, void *rx_priv)
         } else {
         #ifdef CONFIG_RWNX_MON_DATA
         skb_monitor = skb_copy_expand(skb, rtap_len, 0, GFP_ATOMIC);
+        if (!skb_monitor)
+            goto check_len_update;
         skb_monitor->data += (msdu_offset + 2); //sdio/usb word allign
 
         //Save frame length
         frm_len = le32_to_cpu(hw_rxhdr->hwvect.len);
         #endif
+        }
+
+        if (!skb_monitor) {
+            if (status == RX_STAT_MONITOR)
+                dev_kfree_skb(skb);
+            goto check_len_update;
         }
 
         skb_reset_tail_pointer(skb_monitor);
