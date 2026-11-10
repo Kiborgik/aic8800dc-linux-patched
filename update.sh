@@ -69,7 +69,14 @@ fi
 
 NEW_HEAD="$(git rev-parse HEAD)"
 
-if [ "${OLD_HEAD}" = "${NEW_HEAD}" ]; then
+REPO_VERSION="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${SCRIPT_DIR}/dkms.conf")"
+INSTALLED_VERSION="$(PATH="${PATH}:/usr/sbin:/sbin" dkms status -m aic8800dc -k "$(uname -r)" 2>/dev/null \
+                     | sed -n \
+                         -e 's@^aic8800dc/\([^,:]*\)[,:].*: installed.*@\1@p' \
+                         -e 's@^aic8800dc, \([^,:]*\)[,:].*: installed.*@\1@p' \
+                     | head -n 1)"
+
+if [ "${OLD_HEAD}" = "${NEW_HEAD}" ] && [ "${INSTALLED_VERSION}" = "${REPO_VERSION}" ]; then
     echo ""
     echo "##################################################"
     echo "Already up to date. Nothing to install."
@@ -78,7 +85,7 @@ if [ "${OLD_HEAD}" = "${NEW_HEAD}" ]; then
 fi
 
 echo "[2/2] Reinstalling driver via DKMS (sudo will prompt for password)..."
-echo "      ${OLD_HEAD:0:12} -> ${NEW_HEAD:0:12}"
+echo "      ${INSTALLED_VERSION:-not installed} -> ${REPO_VERSION} (${NEW_HEAD:0:12})"
 sudo "${SCRIPT_DIR}/install.sh"
 
 echo ""
