@@ -6236,6 +6236,34 @@ static int rwnx_cfg80211_dump_station(struct wiphy *wiphy,
     struct mesh_peer_info_cfm peer_info_cfm;
     int i = 0;
 
+    /* STA / AP: report the same data as get_station, so that
+     * "iw station dump" and iwinfo/LuCI (signal, bitrate, associated
+     * stations) work. */
+    if ((RWNX_VIF_TYPE(rwnx_vif) == NL80211_IFTYPE_STATION) ||
+        (RWNX_VIF_TYPE(rwnx_vif) == NL80211_IFTYPE_P2P_CLIENT)) {
+        if (idx != 0 || !rwnx_vif->sta.ap)
+            return -ENOENT;
+        sta = rwnx_vif->sta.ap;
+        memcpy(mac, &sta->mac_addr, ETH_ALEN);
+        return rwnx_fill_station_info(sta, rwnx_vif, sinfo);
+    } else if ((RWNX_VIF_TYPE(rwnx_vif) == NL80211_IFTYPE_AP) ||
+               (RWNX_VIF_TYPE(rwnx_vif) == NL80211_IFTYPE_P2P_GO)) {
+        spin_lock_bh(&rwnx_hw->cb_lock);
+        list_for_each_entry(sta_iter, &rwnx_vif->ap.sta_list, list) {
+            if (!sta_iter->valid)
+                continue;
+            if (i++ < idx)
+                continue;
+            sta = sta_iter;
+            break;
+        }
+        spin_unlock_bh(&rwnx_hw->cb_lock);
+        if (sta == NULL)
+            return -ENOENT;
+        memcpy(mac, &sta->mac_addr, ETH_ALEN);
+        return rwnx_fill_station_info(sta, rwnx_vif, sinfo);
+    }
+
     if (RWNX_VIF_TYPE(rwnx_vif) != NL80211_IFTYPE_MESH_POINT)
         return -ENOTSUPP;
 
