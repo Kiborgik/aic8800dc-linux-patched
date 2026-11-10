@@ -448,6 +448,14 @@ struct rwnx_rx_rate_stats {
     int rate_cnt;
 };
 
+struct rwnx_sta_traffic {
+    u64 rx_bytes;
+    u64 tx_bytes;
+    u32 rx_packets;
+    u32 tx_packets;
+    unsigned long last_rx_time;
+};
+
 /**
  * struct rwnx_sta_stats - Structure Used to store statistics specific to a STA
  *
@@ -459,6 +467,7 @@ struct rwnx_sta_stats {
     struct hw_vect last_rx;
     struct rwnx_rx_rate_stats rx_rate;
 //#endif
+    struct rwnx_sta_traffic traffic;
 };
 
 #if (defined CONFIG_HE_FOR_OLD_KERNEL) || (defined CONFIG_VHT_FOR_OLD_KERNEL)
@@ -528,7 +537,7 @@ struct rwnx_amsdu_stats {
 
 struct rwnx_stats {
     int cfm_balance[NX_TXQ_CNT];
-    unsigned long last_rx, last_tx; /* jiffies */
+    unsigned long last_rx; /* jiffies */
     int ampdus_tx[IEEE80211_MAX_AMPDU_BUF];
     int ampdus_rx[IEEE80211_MAX_AMPDU_BUF];
     int ampdus_rx_map[4];

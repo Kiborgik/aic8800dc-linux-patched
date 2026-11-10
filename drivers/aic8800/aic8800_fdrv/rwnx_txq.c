@@ -282,6 +282,7 @@ void rwnx_txq_sta_init(struct rwnx_hw *rwnx_hw, struct rwnx_sta *rwnx_sta,
     }
 
 #endif /* CONFIG_RWNX_FULLMAC*/
+    rwnx_sta->stats.traffic = (struct rwnx_sta_traffic){ .last_rx_time = jiffies };
 }
 
 /**
