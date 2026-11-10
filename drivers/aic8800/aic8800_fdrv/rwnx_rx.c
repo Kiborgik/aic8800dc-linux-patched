@@ -2065,7 +2065,7 @@ check_len_update:
         hdr = (struct ieee80211_hdr *)(skb->data + msdu_offset);
         rwnx_vif = rwnx_rx_get_vif(rwnx_hw, hw_rxhdr->flags_vif_idx);
         if (rwnx_vif) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
+#if !defined(AIC_CFG80211_SPURIOUS_LINK_ID) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
             cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, GFP_ATOMIC);
 #else
             cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, -1, GFP_ATOMIC);
@@ -2150,6 +2150,9 @@ check_len_update:
 
                 sta = &rwnx_hw->sta_table[hw_rxhdr->flags_sta_idx];
                 rwnx_rx_statistic(rwnx_hw, hw_rxhdr, sta);
+                sta->stats.traffic.rx_packets++;
+                sta->stats.traffic.rx_bytes += skb->len;
+                sta->stats.traffic.last_rx_time = jiffies;
 
                 if (sta->vlan_idx != rwnx_vif->vif_index) {
                     rwnx_vif = rwnx_hw->vif_table[sta->vlan_idx];
@@ -2161,7 +2164,7 @@ check_len_update:
 
                 if (hw_rxhdr->flags_is_4addr && !rwnx_vif->use_4addr) {
                     cfg80211_rx_unexpected_4addr_frame(rwnx_vif->ndev,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
+#if !defined(AIC_CFG80211_SPURIOUS_LINK_ID) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
                                                        sta->mac_addr, GFP_ATOMIC);
 #else
                                                        sta->mac_addr, -1, GFP_ATOMIC);

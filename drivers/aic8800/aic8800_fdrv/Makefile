@@ -314,6 +314,12 @@ endif
 ifneq ($(shell grep -A2 '(\*add_key)' $(CFG80211_HDR) | grep -c 'enum nl80211_key_type'),0)
 ccflags-y += -DAIC_CFG80211_KEY_TYPE
 endif
+ifneq ($(shell grep -A1 '(\*set_wiphy_params)' $(CFG80211_HDR) | grep -c 'int radio_idx'),0)
+ccflags-y += -DAIC_CFG80211_RADIO_IDX
+endif
+ifneq ($(shell grep -A1 'bool cfg80211_rx_spurious_frame' $(CFG80211_HDR) | grep -c 'int link_id'),0)
+ccflags-y += -DAIC_CFG80211_SPURIOUS_LINK_ID
+endif
 endif
 
 # Platform support list

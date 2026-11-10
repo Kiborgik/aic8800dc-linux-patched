@@ -29,6 +29,7 @@ typedef struct _compat_android_wifi_priv_cmd {
 
 int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data);
 void rwnx_cfg80211_deinit(struct rwnx_hw *rwnx_hw);
+struct rwnx_sta *rwnx_vif_sta_find(struct rwnx_vif *vif, const u8 *mac, int idx);
 
 void rwnx_skb_align_8bytes(struct sk_buff *skb);
 void rwnx_frame_parser(char *tag, char *data, unsigned long len);

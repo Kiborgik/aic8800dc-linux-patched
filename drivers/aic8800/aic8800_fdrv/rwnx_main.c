@@ -2904,7 +2904,15 @@ static struct rwnx_vif *rwnx_interface_add(struct rwnx_hw *rwnx_hw,
 #endif
 
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    /* add_virtual_intf runs with wiphy->mtx held. Plain register_netdevice()
+     * makes the cfg80211 NETDEV_REGISTER notifier take wiphy->mtx again and
+     * deadlocks (e.g. "iw phy X interface add", OpenWrt netifd). All callers
+     * hold rtnl + wiphy->mtx. */
+    if (cfg80211_register_netdevice(ndev))
+#else
     if (register_netdevice(ndev))
+#endif
         goto err;
 
     spin_lock_bh(&rwnx_hw->cb_lock);
@@ -4960,7 +4968,7 @@ static void rwnx_cfg80211_mgmt_frame_register(struct wiphy *wiphy,
  *	have changed. The actual parameter values are available in
  *	struct wiphy. If returning an error, no value should be changed.
  */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
+#if !defined(AIC_CFG80211_RADIO_IDX) && (LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
 static int rwnx_cfg80211_set_wiphy_params(struct wiphy *wiphy, u32 changed)
 #else
 static int rwnx_cfg80211_set_wiphy_params(struct wiphy *wiphy, int radio_idx, u32 changed)
@@ -4981,7 +4989,7 @@ static int rwnx_cfg80211_set_tx_power(struct wiphy *wiphy,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
  struct wireless_dev *wdev,
 #endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
+#if !defined(AIC_CFG80211_RADIO_IDX) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
                                        enum nl80211_tx_power_setting type, int mbm)
 #else
                                       int radio_idx, enum nl80211_tx_power_setting type, int mbm)
@@ -5992,9 +6000,12 @@ static int rwnx_fill_station_info(struct rwnx_sta *sta, struct rwnx_vif *vif,
 	struct rwnx_sta_stats *stats = &sta->stats;
 	struct rx_vector_1 *rx_vect1 = &stats->last_rx.rx_vect1;
 	union rwnx_rate_ctrl_info *rate_info;
-	struct mm_get_sta_info_cfm cfm;
+	struct mm_get_sta_info_cfm cfm = {};
+	int ret;
 
-	rwnx_send_get_sta_info_req(vif->rwnx_hw, sta->sta_idx, &cfm);
+	ret = rwnx_send_get_sta_info_req(vif->rwnx_hw, sta->sta_idx, &cfm);
+	if (ret)
+		return ret;
 	sinfo->tx_failed = cfm.txfailed;
 	rate_info = (union rwnx_rate_ctrl_info *)&cfm.rate_info;
 
@@ -6069,12 +6080,12 @@ static int rwnx_fill_station_info(struct rwnx_sta *sta, struct rwnx_vif *vif,
 	sinfo->txrate.nss = 1;
 	sinfo->filled |= (BIT(NL80211_STA_INFO_TX_BITRATE) | BIT(NL80211_STA_INFO_TX_FAILED));
 
-	sinfo->inactive_time = jiffies_to_msecs(jiffies - vif->rwnx_hw->stats.last_tx);
-	sinfo->rx_bytes = vif->net_stats.rx_bytes;
-	sinfo->tx_bytes = vif->net_stats.tx_bytes;
-	sinfo->tx_packets = vif->net_stats.tx_packets;
-	sinfo->rx_packets = vif->net_stats.rx_packets;
-	sinfo->signal = (s8)cfm.rssi;
+	sinfo->inactive_time = jiffies_to_msecs(jiffies - stats->traffic.last_rx_time);
+	sinfo->rx_bytes = stats->traffic.rx_bytes;
+	sinfo->tx_bytes = stats->traffic.tx_bytes;
+	sinfo->tx_packets = stats->traffic.tx_packets;
+	sinfo->rx_packets = stats->traffic.rx_packets;
+	sinfo->signal = (s8)cfm.rssi ? (s8)cfm.rssi : rx_vect1->rssi1;
 	sinfo->rxrate.nss = 1;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)
@@ -6167,6 +6178,46 @@ static int rwnx_fill_station_info(struct rwnx_sta *sta, struct rwnx_vif *vif,
 }
 
 
+struct rwnx_sta *rwnx_vif_sta_find(struct rwnx_vif *vif, const u8 *mac, int idx)
+{
+    struct rwnx_sta *peers[2] = { NULL, NULL };
+    struct rwnx_sta *sta, *found = NULL;
+    unsigned int i;
+    int n = 0;
+
+    switch (RWNX_VIF_TYPE(vif)) {
+    case NL80211_IFTYPE_STATION:
+    case NL80211_IFTYPE_P2P_CLIENT:
+        peers[0] = vif->sta.ap;
+        peers[1] = vif->sta.tdls_sta;
+        break;
+    case NL80211_IFTYPE_AP_VLAN:
+        peers[0] = vif->ap_vlan.sta_4a;
+        break;
+    case NL80211_IFTYPE_AP:
+    case NL80211_IFTYPE_P2P_GO:
+    case NL80211_IFTYPE_MESH_POINT:
+        spin_lock_bh(&vif->rwnx_hw->cb_lock);
+        list_for_each_entry(sta, &vif->ap.sta_list, list) {
+            if (sta->valid && (mac ? ether_addr_equal(sta->mac_addr, mac) : n++ == idx)) {
+                found = sta;
+                break;
+            }
+        }
+        spin_unlock_bh(&vif->rwnx_hw->cb_lock);
+        return found;
+    default:
+        return NULL;
+    }
+
+    for (i = 0; i < ARRAY_SIZE(peers); i++) {
+        sta = peers[i];
+        if (sta && sta->valid && (mac ? ether_addr_equal(sta->mac_addr, mac) : n++ == idx))
+            return sta;
+    }
+    return NULL;
+}
+
 /**
  * @get_station: get station information for the station identified by @mac
  */
@@ -6187,27 +6238,7 @@ static int rwnx_cfg80211_get_station(struct wiphy *wiphy,
     struct net_device *dev = wdev->netdev;
 #endif
     struct rwnx_vif *vif = netdev_priv(dev);
-    struct rwnx_sta *sta = NULL;
-
-    if (RWNX_VIF_TYPE(vif) == NL80211_IFTYPE_MONITOR)
-        return -EINVAL;
-    else if ((RWNX_VIF_TYPE(vif) == NL80211_IFTYPE_STATION) ||
-             (RWNX_VIF_TYPE(vif) == NL80211_IFTYPE_P2P_CLIENT)) {
-        if (vif->sta.ap && ether_addr_equal(vif->sta.ap->mac_addr, mac))
-            sta = vif->sta.ap;
-    }
-    else
-    {
-        struct rwnx_sta *sta_iter;
-		spin_lock_bh(&vif->rwnx_hw->cb_lock);
-        list_for_each_entry(sta_iter, &vif->ap.sta_list, list) {
-            if (sta_iter->valid && ether_addr_equal(sta_iter->mac_addr, mac)) {
-                sta = sta_iter;
-                break;
-            }
-        }
-		spin_unlock_bh(&vif->rwnx_hw->cb_lock);
-    }
+    struct rwnx_sta *sta = rwnx_vif_sta_find(vif, mac, 0);
 
     if (sta)
         return rwnx_fill_station_info(sta, vif, sinfo);
@@ -6236,8 +6267,13 @@ static int rwnx_cfg80211_dump_station(struct wiphy *wiphy,
     struct mesh_peer_info_cfm peer_info_cfm;
     int i = 0;
 
-    if (RWNX_VIF_TYPE(rwnx_vif) != NL80211_IFTYPE_MESH_POINT)
-        return -ENOTSUPP;
+    if (RWNX_VIF_TYPE(rwnx_vif) != NL80211_IFTYPE_MESH_POINT) {
+        sta = rwnx_vif_sta_find(rwnx_vif, NULL, idx);
+        if (!sta)
+            return -ENOENT;
+        memcpy(mac, &sta->mac_addr, ETH_ALEN);
+        return rwnx_fill_station_info(sta, rwnx_vif, sinfo);
+    }
 
     list_for_each_entry(sta_iter, &rwnx_vif->ap.sta_list, list) {
         if (i < idx) {
@@ -9293,6 +9329,9 @@ if((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8801) ||
     }
 #endif
     rtnl_lock();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    wiphy_lock(wiphy);
+#endif
 
     /* Add an initial station interface */
     vif = rwnx_interface_add(rwnx_hw, "wlan%d", NET_NAME_UNKNOWN,
@@ -9304,6 +9343,9 @@ if((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8801) ||
                                 NL80211_IFTYPE_MONITOR, NULL);
     #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    wiphy_unlock(wiphy);
+#endif
     rtnl_unlock();
 
     if (!vif) {
@@ -9321,10 +9363,17 @@ if((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8801) ||
 #ifdef  CONFIG_USE_P2P0
 
         rtnl_lock();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+        wiphy_lock(wiphy);
+#endif
         /* Add an initial p2p0 interface */
         vif = rwnx_interface_add(rwnx_hw, "p2p%d", NET_NAME_UNKNOWN,
                                     NL80211_IFTYPE_STATION, NULL);
-        vif->is_p2p_vif = 1;
+        if (vif)
+            vif->is_p2p_vif = 1;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+        wiphy_unlock(wiphy);
+#endif
         rtnl_unlock();
 
         if (!vif) {

@@ -555,6 +555,18 @@ static int rwnx_prep_tx(struct rwnx_hw *rwnx_hw, struct rwnx_txhdr *txhdr)
     return 0;
 }
 
+void rwnx_tx_account(struct rwnx_sw_txhdr *sw_txhdr)
+{
+    struct rwnx_sta *sta = sw_txhdr->rwnx_sta;
+
+    sw_txhdr->rwnx_vif->net_stats.tx_packets++;
+    sw_txhdr->rwnx_vif->net_stats.tx_bytes += sw_txhdr->frame_len;
+    if (sta) {
+        sta->stats.traffic.tx_packets++;
+        sta->stats.traffic.tx_bytes += sw_txhdr->frame_len;
+    }
+}
+
 /**
  *  rwnx_tx_push - Push one packet to fw
  *
@@ -657,9 +669,7 @@ void rwnx_tx_push(struct rwnx_hw *rwnx_hw, struct rwnx_txhdr *txhdr, int flags)
             sw_txhdr->desc.host.status_desc_addr = 0;
         }
 
-        sw_txhdr->rwnx_vif->net_stats.tx_packets++;
-        sw_txhdr->rwnx_vif->net_stats.tx_bytes += sw_txhdr->frame_len;
-        rwnx_hw->stats.last_tx = jiffies;
+        rwnx_tx_account(sw_txhdr);
     }
     aicwf_frame_tx((void *)(rwnx_hw->sdiodev), skb);
 #endif
@@ -686,9 +696,7 @@ void rwnx_tx_push(struct rwnx_hw *rwnx_hw, struct rwnx_txhdr *txhdr, int flags)
             sw_txhdr->desc.host.status_desc_addr = 0;
         }
 
-        sw_txhdr->rwnx_vif->net_stats.tx_packets++;
-        sw_txhdr->rwnx_vif->net_stats.tx_bytes += sw_txhdr->frame_len;
-        rwnx_hw->stats.last_tx = jiffies;
+        rwnx_tx_account(sw_txhdr);
     }
     aicwf_frame_tx((void *)(rwnx_hw->usbdev), skb);
 #endif
@@ -2093,8 +2101,7 @@ int rwnx_txdatacfm(void *pthis, void *host_id)
 #endif
 
     /* Update statistics */
-    sw_txhdr->rwnx_vif->net_stats.tx_packets++;
-    sw_txhdr->rwnx_vif->net_stats.tx_bytes += sw_txhdr->frame_len;
+    rwnx_tx_account(sw_txhdr);
 
     /* Release SKBs */
 #ifdef CONFIG_RWNX_AMSDUS_TX
