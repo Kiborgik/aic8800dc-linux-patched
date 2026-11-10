@@ -2904,7 +2904,15 @@ static struct rwnx_vif *rwnx_interface_add(struct rwnx_hw *rwnx_hw,
 #endif
 
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    /* add_virtual_intf runs with wiphy->mtx held. Plain register_netdevice()
+     * makes the cfg80211 NETDEV_REGISTER notifier take wiphy->mtx again and
+     * deadlocks (e.g. "iw phy X interface add", OpenWrt netifd). All callers
+     * hold rtnl + wiphy->mtx. */
+    if (cfg80211_register_netdevice(ndev))
+#else
     if (register_netdevice(ndev))
+#endif
         goto err;
 
     spin_lock_bh(&rwnx_hw->cb_lock);
@@ -9293,6 +9301,9 @@ if((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8801) ||
     }
 #endif
     rtnl_lock();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    wiphy_lock(wiphy);
+#endif
 
     /* Add an initial station interface */
     vif = rwnx_interface_add(rwnx_hw, "wlan%d", NET_NAME_UNKNOWN,
@@ -9304,6 +9315,9 @@ if((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8801) ||
                                 NL80211_IFTYPE_MONITOR, NULL);
     #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    wiphy_unlock(wiphy);
+#endif
     rtnl_unlock();
 
     if (!vif) {
@@ -9321,10 +9335,16 @@ if((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8801) ||
 #ifdef  CONFIG_USE_P2P0
 
         rtnl_lock();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+        wiphy_lock(wiphy);
+#endif
         /* Add an initial p2p0 interface */
         vif = rwnx_interface_add(rwnx_hw, "p2p%d", NET_NAME_UNKNOWN,
                                     NL80211_IFTYPE_STATION, NULL);
         vif->is_p2p_vif = 1;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+        wiphy_unlock(wiphy);
+#endif
         rtnl_unlock();
 
         if (!vif) {
