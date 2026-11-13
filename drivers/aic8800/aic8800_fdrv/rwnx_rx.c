@@ -1009,12 +1009,16 @@ static void rwnx_rx_add_rtap_hdr(struct rwnx_hw* rwnx_hw,
         *pos = 0;
     } else {
         struct ieee80211_supported_band* band =
-                rwnx_hw->wiphy->bands[phy_info->phy_band];
+                phy_info->phy_band < NUM_NL80211_BANDS ?
+                rwnx_hw->wiphy->bands[phy_info->phy_band] : NULL;
         rtap->it_present |= cpu_to_le32(1 << IEEE80211_RADIOTAP_RATE);
-        BUG_ON((rate_idx = legrates_lut[rxvect->leg_rate]) == -1);
+        rate_idx = legrates_lut[rxvect->leg_rate];
         if (phy_info->phy_band == NL80211_BAND_5GHZ)
             rate_idx -= 4;  /* rwnx_ratetable_5ghz[0].hw_value == 4 */
-        *pos = DIV_ROUND_UP(band->bitrates[rate_idx].bitrate, 5);
+        if (band && rate_idx < band->n_bitrates)
+            *pos = DIV_ROUND_UP(band->bitrates[rate_idx].bitrate, 5);
+        else
+            *pos = 0;
     }
     pos++;
 
@@ -1978,6 +1982,8 @@ u8 rwnx_rxdataind_aicwf(struct rwnx_hw *rwnx_hw, void *hostid, void *rx_priv)
         rwnx_vif = rwnx_rx_get_vif(rwnx_hw, rwnx_hw->monitor_vif);
         if (!rwnx_vif) {
             dev_err(rwnx_hw->dev, "Received monitor frame but there is no monitor interface open\n");
+            if (status == RX_STAT_MONITOR)
+                dev_kfree_skb(skb);
             goto check_len_update;
         }
 
@@ -2018,11 +2024,19 @@ u8 rwnx_rxdataind_aicwf(struct rwnx_hw *rwnx_hw, void *hostid, void *rx_priv)
         } else {
         #ifdef CONFIG_RWNX_MON_DATA
         skb_monitor = skb_copy_expand(skb, rtap_len, 0, GFP_ATOMIC);
+        if (!skb_monitor)
+            goto check_len_update;
         skb_monitor->data += (msdu_offset + 2); //sdio/usb word allign
 
         //Save frame length
         frm_len = le32_to_cpu(hw_rxhdr->hwvect.len);
         #endif
+        }
+
+        if (!skb_monitor) {
+            if (status == RX_STAT_MONITOR)
+                dev_kfree_skb(skb);
+            goto check_len_update;
         }
 
         skb_reset_tail_pointer(skb_monitor);

@@ -44,6 +44,8 @@
 #define txrx_err(fmt, ...)          pr_err("txrx_err:<%s,%d>: " fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define sdio_err(fmt, ...)          pr_err("sdio_err:<%s,%d>: " fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define usb_err(fmt, ...)           pr_err("usb_err:<%s,%d>: " fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define usb_err_ratelimited(fmt, ...) \
+    pr_err_ratelimited("usb_err:<%s,%d>: " fmt, __func__, __LINE__, ##__VA_ARGS__)
 #if DBG_LEVEL >= DEBUG_DEBUG_LEVEL
 #define txrx_dbg(fmt, ...)          printk("txrx: " fmt, ##__VA_ARGS__)
 #define sdio_dbg(fmt, ...)          printk("aicsdio: " fmt, ##__VA_ARGS__)

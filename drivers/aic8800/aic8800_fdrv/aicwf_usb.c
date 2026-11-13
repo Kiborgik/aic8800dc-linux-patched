@@ -297,7 +297,7 @@ static void aicwf_usb_rx_complete(struct urb *urb)
 
         if(!aicwf_rxbuff_enqueue(usb_dev->dev, &rx_priv->rxq, rx_buff)){
             spin_unlock_irqrestore(&rx_priv->rxqlock, flags);
-            usb_err("rx_priv->rxq is over flow!!!\n");
+            usb_err_ratelimited("rx_priv->rxq is over flow!!!\n");
             aicwf_prealloc_rxbuff_free(rx_buff, &rx_priv->rxbuff_lock);
             aicwf_usb_rx_buf_put(usb_dev, usb_buf);
             aicwf_usb_rx_submit_all_urb_(usb_dev);
@@ -305,10 +305,7 @@ static void aicwf_usb_rx_complete(struct urb *urb)
         }
         spin_unlock_irqrestore(&rx_priv->rxqlock, flags);
         atomic_inc(&rx_priv->rx_cnt);
-            
-        if(atomic_read(&rx_priv->rx_cnt) == 1){
-            complete(&rx_priv->usbdev->bus_if->busrx_trgg);
-        }
+        complete(&rx_priv->usbdev->bus_if->busrx_trgg);
 
         aicwf_usb_rx_buf_put(usb_dev, usb_buf);
         aicwf_usb_rx_submit_all_urb_(usb_dev);
@@ -378,7 +375,7 @@ static void aicwf_usb_rx_complete(struct urb *urb)
         #endif
         if(!aicwf_rxframe_enqueue(usb_dev->dev, &rx_priv->rxq, skb)){
             spin_unlock_irqrestore(&rx_priv->rxqlock, flags);
-            usb_err("rx_priv->rxq is over flow!!!\n");
+            usb_err_ratelimited("rx_priv->rxq is over flow!!!\n");
             aicwf_dev_skb_free(skb);
             aicwf_usb_rx_buf_put(usb_dev, usb_buf);
             aicwf_usb_rx_submit_all_urb_(usb_dev);
@@ -388,10 +385,7 @@ static void aicwf_usb_rx_complete(struct urb *urb)
         atomic_inc(&rx_priv->rx_cnt);
 		
 #ifndef CONFIG_RX_TASKLET 
-		//if(!rx_priv->rx_thread_working && (atomic_read(&rx_priv->rx_cnt)>0)){
-		if(atomic_read(&rx_priv->rx_cnt) == 1){
-        	complete(&rx_priv->usbdev->bus_if->busrx_trgg);
-		}
+        complete(&rx_priv->usbdev->bus_if->busrx_trgg);
 #else
         tasklet_schedule(&rx_priv->usbdev->recv_tasklet);
 #endif
@@ -448,7 +442,7 @@ static void aicwf_usb_msg_rx_complete(struct urb *urb)
         spin_lock_irqsave(&rx_priv->msg_rxqlock, flags);
         if(!aicwf_rxframe_enqueue(usb_dev->dev, &rx_priv->msg_rxq, skb)){
             spin_unlock_irqrestore(&rx_priv->msg_rxqlock, flags);
-            usb_err("rx_priv->rxq is over flow!!!\n");
+            usb_err_ratelimited("rx_priv->rxq is over flow!!!\n");
             aicwf_dev_skb_free(skb);
             return;
         }

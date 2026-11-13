@@ -1522,6 +1522,19 @@ static msg_cb_fct *msg_hdlrs[] = {
 #endif /* CONFIG_RWNX_FULLMAC */
 };
 
+static const u16 msg_hdlrs_cnt[ARRAY_SIZE(msg_hdlrs)] = {
+    [TASK_MM]    = ARRAY_SIZE(mm_hdlrs),
+    [TASK_DBG]   = ARRAY_SIZE(dbg_hdlrs),
+#ifdef CONFIG_RWNX_FULLMAC
+    [TASK_TDLS]  = ARRAY_SIZE(tdls_hdlrs),
+    [TASK_SCANU] = ARRAY_SIZE(scan_hdlrs),
+    [TASK_ME]    = ARRAY_SIZE(me_hdlrs),
+    [TASK_SM]    = ARRAY_SIZE(sm_hdlrs),
+    [TASK_APM]   = ARRAY_SIZE(apm_hdlrs),
+    [TASK_MESH]  = ARRAY_SIZE(mesh_hdlrs),
+#endif /* CONFIG_RWNX_FULLMAC */
+};
+
 /**
  *
  */
@@ -1533,8 +1546,13 @@ void rwnx_rx_handle_msg(struct rwnx_hw *rwnx_hw, struct ipc_e2a_msg *msg)
 	//	MSG_I(msg->id),
 	//	rwnx_id2str[MSG_T(msg->id)][MSG_I(msg->id)]);
 	
-    rwnx_hw->cmd_mgr->msgind(rwnx_hw->cmd_mgr, msg,
-                            msg_hdlrs[MSG_T(msg->id)][MSG_I(msg->id)]);
+    unsigned int t = MSG_T(msg->id), i = MSG_I(msg->id);
+
+    if (t >= ARRAY_SIZE(msg_hdlrs) || !msg_hdlrs[t] || i >= msg_hdlrs_cnt[t]) {
+        pr_warn_ratelimited("rwnx: dropping firmware msg with unknown id 0x%x\n", msg->id);
+        return;
+    }
+    rwnx_hw->cmd_mgr->msgind(rwnx_hw->cmd_mgr, msg, msg_hdlrs[t][i]);
 }
 
 void rwnx_rx_handle_print(struct rwnx_hw *rwnx_hw, u8 *msg, u32 len)
